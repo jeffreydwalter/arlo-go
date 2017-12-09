@@ -25,7 +25,7 @@ type Request struct {
 }
 type Response struct {
 	http.Response
-	Data interface{}
+	ParsedBody interface{}
 }
 
 func NewClient(baseurl string) (*Client, error) {
@@ -88,27 +88,6 @@ func GetContentType(ct string) (string, error) {
 	return mediaType, nil
 }
 
-/*
-func (resp *Response) Parse(schema interface{}) (interface{}, error){
-	mediatype, _, err := mime.ParseMediaType(resp.Header.Get("Content-Type"))
-	if err != nil {
-		return nil, err
-	}
-	log.Printf("CONTENT TYPE %s\n", mediatype)
-
-	switch mediatype {
-	case "application/json":
-		log.Println("DECODING JSON: %s", json.Valid(resp.Data))
-		if err := json.Unmarshal(resp.Data, schema); err != nil {
-			log.Println("GOT AN ERROR")
-			return nil, err
-		}
-	}
-
-	return schema, nil
-}
-*/
-
 func (c *Client) newRequest(method string, uri string, body interface{}, header http.Header) (*Request, error) {
 
 	var buf io.ReadWriter
@@ -147,30 +126,30 @@ func (c *Client) newRequest(method string, uri string, body interface{}, header 
 
 func (c *Client) newResponse(resp *http.Response) (*Response, error) {
 
-	data, err := ioutil.ReadAll(resp.Body)
+	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		return nil, err
 	}
 
 	// log.Printf("DATA: %v", string(data))
 
-	var d interface{}
 	mediaType, err := GetContentType(resp.Header.Get("Content-Type"))
 	if err != nil {
 		return nil, errors.WithMessage(err, "failed to create response object")
 	}
 
+	var pb interface{}
 	switch mediaType {
 	case "application/json":
-		err = json.Unmarshal([]byte(data), &d)
+		err = json.Unmarshal([]byte(body), &pb)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to create response object")
 		}
 	}
 
 	return &Response{
-		Response: *resp,
-		Data:     d,
+		Response:   *resp,
+		ParsedBody: pb,
 	}, nil
 }
 

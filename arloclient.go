@@ -1,12 +1,11 @@
 package arloclient
 
 import (
-	"log"
 	"time"
 
 	"github.com/jeffreydwalter/arloclient/internal/request"
+	"github.com/jeffreydwalter/arloclient/internal/util"
 
-	"github.com/mitchellh/mapstructure"
 	"github.com/pkg/errors"
 )
 
@@ -14,10 +13,11 @@ type Arlo struct {
 	user    string
 	pass    string
 	client  *request.Client
-	account Account
+	Account *Account
+	Devices *Devices
 }
 
-func NewArlo(user string, pass string) (*Arlo, error) {
+func newArlo(user string, pass string) *Arlo {
 
 	c, _ := request.NewClient(BaseUrl)
 	arlo := &Arlo{
@@ -26,190 +26,240 @@ func NewArlo(user string, pass string) (*Arlo, error) {
 		client: c,
 	}
 
-	if _, err := arlo.Login(); err != nil {
-		return nil, errors.WithMessage(err, "failed to create arlo object")
-	}
-
-	return arlo, nil
+	return arlo
 }
 
-func (a *Arlo) Login() (*Account, error) {
+func Login(user string, pass string) (*Arlo, error) {
 
-	resp, err := a.client.Post(LoginUri, Credentials{Email: a.user, Password: a.pass}, nil)
+	a := newArlo(user, pass)
+
+	body := map[string]string{"email": a.user, "password": a.pass}
+	resp, err := a.client.Post(LoginUri, body, nil)
+
 	if err != nil {
-		return nil, errors.WithMessage(err, "failed to login")
+		return nil, errors.WithMessage(err, "login request failed")
 	}
 
 	var loginResponse LoginResponse
-	if err := mapstructure.Decode(resp.Data, &loginResponse); err != nil {
-		return nil, errors.Wrap(err, "failed to create loginresponse object")
+	if err := util.Decode(resp.ParsedBody, &loginResponse); err != nil {
+		return nil, err
 	}
 
-	if !loginResponse.Success {
-		return nil, errors.New("request was unsuccessful")
+	if loginResponse.Success {
+		// Cache the auth token.
+		a.client.BaseHttpHeader.Add("Authorization", loginResponse.Data.Token)
+
+		// Save the account info with the Arlo struct.
+		a.Account = &loginResponse.Data
+
+		if deviceResponse, err := a.GetDevices(); err != nil {
+			return nil, err
+		} else {
+			if !deviceResponse.Success {
+				return nil, err
+			}
+			a.Devices = &deviceResponse.Data
+		}
+	} else {
+		return nil, errors.New("failed to login")
 	}
 
-	// Cache the auth token.
-	a.client.BaseHttpHeader.Add("Authorization", loginResponse.Data.Token)
-
-	// Save the account info with the Arlo struct.
-	a.account = loginResponse.Data
-
-	return &loginResponse.Data, nil
+	return a, nil
 }
 
-func (a *Arlo) Logout() (*request.Response, error) {
+func (a *Arlo) Logout() (*Status, error) {
 
-	return a.client.Put(LogoutUri, nil, nil)
+	resp, err := a.client.Put(LogoutUri, nil, nil)
+
+	if err != nil {
+		return nil, errors.WithMessage(err, "logout request failed")
+	}
+
+	var status Status
+	if err := util.Decode(resp.ParsedBody, &status); err != nil {
+		return nil, err
+	}
+
+	return &status, nil
 }
 
-func (a *Arlo) GetDevices() (*Devices, error) {
+func (a *Arlo) GetDevices() (*DeviceResponse, error) {
 
 	resp, err := a.client.Get(DevicesUri, nil)
 
 	if err != nil {
-		return nil, errors.WithMessage(err, "failed to get devices")
+		return nil, errors.WithMessage(err, "get devices request failed")
 	}
 
 	var deviceResponse DeviceResponse
-	if err := mapstructure.Decode(resp.Data, &deviceResponse); err != nil {
-		return nil, errors.Wrap(err, "failed to create deviceresponse object")
+	if err := util.Decode(resp.ParsedBody, &deviceResponse); err != nil {
+		return nil, err
 	}
 
-	if !deviceResponse.Success {
-		return nil, errors.New("request was unsuccessful")
-	}
-
-	return &deviceResponse.Data, nil
+	return &deviceResponse, nil
 }
 
-func (a *Arlo) GetLibraryMetaData(fromDate, toDate time.Time) (*LibraryMetaData, error) {
+func (a *Arlo) GetLibraryMetaData(fromDate, toDate time.Time) (*LibraryMetaDataResponse, error) {
 
-	resp, err := a.client.Post(LibraryMetadataUri, Duration{fromDate.Format("20060102"), toDate.Format("20060102")}, nil)
+	body := map[string]string{"dateFrom": fromDate.Format("20060102"), "dateTo": toDate.Format("20060102")}
+	resp, err := a.client.Post(LibraryMetadataUri, body, nil)
 
 	if err != nil {
 		return nil, errors.WithMessage(err, "failed to get library metadata")
 	}
 
-	log.Printf("GETLIBRARYMETADATA: %v", resp.Data)
-
 	var libraryMetaDataResponse LibraryMetaDataResponse
-	if err := mapstructure.Decode(resp.Data, &libraryMetaDataResponse); err != nil {
-		return nil, errors.WithMessage(err, "failed to create librarymetadataresponse object")
+	if err := util.Decode(resp.ParsedBody, &libraryMetaDataResponse); err != nil {
+		return nil, err
 	}
 
-	if !libraryMetaDataResponse.Success {
-		return nil, errors.New("request was unsuccessful")
-	}
-
-	return &libraryMetaDataResponse.Data, nil
+	return &libraryMetaDataResponse, nil
 }
 
-func (a *Arlo) UpdateProfile(firstName, lastName string) (*UserProfile, error) {
+func (a *Arlo) GetLibrary(fromDate, toDate time.Time) (*LibraryResponse, error) {
 
-	resp, err := a.client.Put(UserProfileUri, FullName{firstName, lastName}, nil)
-
+	body := map[string]string{"dateFrom": fromDate.Format("20060102"), "dateTo": toDate.Format("20060102")}
+	resp, err := a.client.Post(LibraryUri, body, nil)
 	if err != nil {
+		return nil, errors.WithMessage(err, "failed to get library")
+	}
+
+	var libraryResponse LibraryResponse
+	if err := util.Decode(resp.ParsedBody, &libraryResponse); err != nil {
 		return nil, err
 	}
 
-	var userProfileResponse UserProfileResponse
-	if err := mapstructure.Decode(resp.Data, &userProfileResponse); err != nil {
-		return nil, err
-	}
-
-	if !userProfileResponse.Success {
-		return nil, err
-	}
-
-	return &userProfileResponse.Data, nil
+	return &libraryResponse, nil
 }
 
-func (a *Arlo) UpdatePassword(password string) error {
+func (a *Arlo) UpdateDeviceName(d Device, name string) (*Status, error) {
 
-	_, err := a.client.Post(UserChangePasswordUri, PasswordPair{a.pass, password}, nil)
+	body := map[string]string{"deviceId": d.DeviceId, "deviceName": name, "parentId": d.ParentId}
+	resp, err := a.client.Put(DeviceRenameUri, body, nil)
+
 	if err != nil {
+		return nil, errors.WithMessage(err, "failed to update device name")
+	}
+
+	var status Status
+	if err := util.Decode(resp.ParsedBody, &status); err != nil {
+		return nil, err
+	}
+
+	return &status, nil
+
+	return nil, errors.New("Device not found")
+}
+
+// UpdateProfile takes a first and last name, and updates the user profile with that information.
+func (a *Arlo) UpdateProfile(firstName, lastName string) (*Status, error) {
+
+	body := map[string]string{"firstName": firstName, "lastName": lastName}
+	resp, err := a.client.Put(UserProfileUri, body, nil)
+
+	if err != nil {
+		return nil, errors.WithMessage(err, "failed to update profile")
+	}
+
+	var status Status
+	if err := util.Decode(resp.ParsedBody, &status); err != nil {
+		return nil, err
+	}
+
+	return &status, nil
+}
+
+func (a *Arlo) UpdatePassword(password string) (*Status, error) {
+
+	body := map[string]string{"currentPassword": a.pass, "newPassword": password}
+	resp, err := a.client.Post(UserChangePasswordUri, body, nil)
+	if err != nil {
+		return nil, errors.WithMessage(err, "failed to update password")
+	}
+
+	var status Status
+	if err := util.Decode(resp.ParsedBody, &status); err != nil {
+		return nil, err
+	}
+
+	if status.Success {
 		a.pass = password
 	}
-	return err
+
+	return &status, nil
 }
 
 /*
-##
-# This is an example of the json you would pass in the body to UpdateFriends():
-#{
-#  "firstName":"Some",
-#  "lastName":"Body",
-#  "devices":{
-#    "XXXXXXXXXXXXX":"Camera 1",
-#    "XXXXXXXXXXXXX":"Camera 2 ",
-#    "XXXXXXXXXXXXX":"Camera 3"
-#  },
-#  "lastModified":1463977440911,
-#  "adminUser":true,
-#  "email":"user@example.com",
-#  "id":"XXX-XXXXXXX"
-#}
-##
-func (a *Arlo) UpdateFriends(body):
-return a.client.Put('https://arlo.netgear.com/hmsweb/users/friends', body)
+ This is an example of the json you would pass in the body to UpdateFriends():
+{
+  "firstName":"Some",
+  "lastName":"Body",
+  "devices":{
+    "XXXXXXXXXXXXX":"Camera 1",
+    "XXXXXXXXXXXXX":"Camera 2 ",
+    "XXXXXXXXXXXXX":"Camera 3"
+  },
+  "lastModified":1463977440911,
+  "adminUser":true,
+  "email":"user@example.com",
+  "id":"XXX-XXXXXXX"
+}
+*/
+func (a *Arlo) UpdateFriends(f Friend) (*Status, error) {
 
-func (a *Arlo) UpdateDeviceName(device, name):
-return a.client.Put('https://arlo.netgear.com/hmsweb/users/devices/renameDevice', {'deviceId':device.get('deviceId'), 'deviceName':name, 'parentId':device.get('parentId')})
+	resp, err := a.client.Put(UserFriendsUri, f, nil)
+	if err != nil {
+		return nil, errors.WithMessage(err, "failed to update friends")
+	}
 
-##
-# This is an example of the json you would pass in the body to UpdateDisplayOrder() of your devices in the UI.
-#
-# XXXXXXXXXXXXX is the device id of each camera. You can get this from GetDevices().
-#{
-#  "devices":{
-#    "XXXXXXXXXXXXX":1,
-#    "XXXXXXXXXXXXX":2,
-#    "XXXXXXXXXXXXX":3
-#  }
-#}
-##
-func (a *Arlo) UpdateDisplayOrder(body):
-return a.client.Post('https://arlo.netgear.com/hmsweb/users/devices/displayOrder', body)
+	var status Status
+	if err := util.Decode(resp.ParsedBody, &status); err != nil {
+		return nil, err
+	}
 
-##
-# This call returns the following:
-# presignedContentUrl is a link to the actual video in Amazon AWS.
-# presignedThumbnailUrl is a link to the thumbnail .jpg of the actual video in Amazon AWS.
-#
-#[
-# {
-#  "mediaDurationSecond": 30,
-#  "contentType": "video/mp4",
-#  "name": "XXXXXXXXXXXXX",
-#  "presignedContentUrl": "https://arlos3-prod-z2.s3.amazonaws.com/XXXXXXX_XXXX_XXXX_XXXX_XXXXXXXXXXXXX/XXX-XXXXXXX/XXXXXXXXXXXXX/recordings/XXXXXXXXXXXXX.mp4?AWSAccessKeyId=XXXXXXXXXXXXXXXXXXXX&Expires=1472968703&Signature=XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
-#  "lastModified": 1472881430181,
-#  "localCreatedDate": XXXXXXXXXXXXX,
-#  "presignedThumbnailUrl": "https://arlos3-prod-z2.s3.amazonaws.com/XXXXXXX_XXXX_XXXX_XXXX_XXXXXXXXXXXXX/XXX-XXXXXXX/XXXXXXXXXXXXX/recordings/XXXXXXXXXXXXX_thumb.jpg?AWSAccessKeyId=XXXXXXXXXXXXXXXXXXXX&Expires=1472968703&Signature=XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
-#  "reason": "motionRecord",
-#  "deviceId": "XXXXXXXXXXXXX",
-#  "createdBy": "XXXXXXXXXXXXX",
-#  "createdDate": "20160903",
-#  "timeZone": "America/Chicago",
-#  "ownerId": "XXX-XXXXXXX",
-#  "utcCreatedDate": XXXXXXXXXXXXX,
-#  "currentState": "new",
-#  "mediaDuration": "00:00:30"
-# }
-#]
-##
-func (a *Arlo) GetLibrary(from_date, to_date):
-return a.client.Post('https://arlo.netgear.com/hmsweb/users/library', {'dateFrom':from_date, 'dateTo':to_date})
+	return &status, nil
+}
 
+func (a *Arlo) UpdateDisplayOrder(d DeviceOrder) (*Status, error) {
+
+	resp, err := a.client.Post(DeviceDisplayOrderUri, d, nil)
+	if err != nil {
+		return nil, errors.WithMessage(err, "failed to update display order")
+	}
+
+	var status Status
+	if err := util.Decode(resp.ParsedBody, &status); err != nil {
+		return nil, err
+	}
+
+	return &status, nil
+}
+
+/*
 ##
 # Delete a single video recording from Arlo.
 #
 # All of the date info and device id you need to pass into this method are given in the results of the GetLibrary() call.
 #
 ##
-func (a *Arlo) DeleteRecording(camera, created_date, utc_created_date):
-return a.client.Post('https://arlo.netgear.com/hmsweb/users/library/recycle', {'data':[{'createdDate':created_date,'utcCreatedDate':utc_created_date,'deviceId':camera.get('deviceId')}]})
+*/
+func (a *Arlo) DeleteRecording(r *Recording) (*Status, error) {
 
+	body := map[string]map[string]interface{}{"data": {"createdDate": r.CreatedDate, "utcCreatedDate": r.UtcCreatedDate, "deviceId": r.DeviceId}}
+	resp, err := a.client.Post(LibraryRecycleUri, body, nil)
+	if err != nil {
+		return nil, errors.WithMessage(err, "failed to delete recording")
+	}
+
+	var status Status
+	if err := util.Decode(resp.ParsedBody, &status); err != nil {
+		return nil, err
+	}
+
+	return &status, nil
+}
+
+/*
 ##
 # Delete a batch of video recordings from Arlo.
 #
