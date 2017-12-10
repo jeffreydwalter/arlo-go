@@ -1,4 +1,4 @@
-package arloclient
+package arlo
 
 const (
 	BaseUrl               = "https://arlo.netgear.com/hmsweb"

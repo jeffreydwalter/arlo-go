@@ -1,4 +1,4 @@
-package arloclient
+package arlo
 
 /*
 // Credentials is the login credential data.
@@ -45,12 +45,45 @@ type Favorite struct {
 	Favorite    uint8 `json:"Favorite"`
 }
 
-type Friend struct {
-	FirstName    string      `json:"firstName"`
-	LastName     string      `json:"lastName"`
-	Devices      DeviceOrder `json:"devices"`
-	LastModified float64     `json:"lastModified"`
-	AdminUser    bool        `json:"adminUser"`
-	Email        string      `json:"email"`
-	Id           string      `json:"id"`
+/*
+type Device struct {
+	DeviceType         string     `json:"deviceType"`
+	XCloudId           string     `json:"xCloudId"`
+	DisplayOrder       uint8      `json:"displayOrder"`
+	State              string     `json:"state"`
+	ModelId            string     `json:"modelId"`
+	InterfaceVersion   string     `json:"interfaceVersion"`
+	ParentId           string     `json:"parentId"`
+	UserId             string     `json:"userId"`
+	DeviceName         string     `json:"deviceName"`
+	FirmwareVersion    string     `json:"firmwareVersion"`
+	MediaObjectCount   uint8      `json:"mediaObjectCount"`
+	DateCreated        float64    `json:"dateCreated"`
+	Owner              Owner      `json:"owner"`
+	Properties         Properties `json:"properties"`
+	UniqueId           string     `json:"uniqueId"`
+	LastModified       float64    `json:"lastModified"`
+	UserRole           string     `json:"userRole"`
+	InterfaceSchemaVer string     `json:"interfaceSchemaVer"`
+	DeviceId           string     `json:"deviceId"`
+}
+*/
+
+type StreamUrl struct {
+	Url string `json:"url"`
+}
+
+type NotificationProperties struct {
+	ActivityState string `json:"activityState"`
+	CameraId      string `json:"cameraId"`
+}
+
+type Notification struct {
+	To              string                 `json:"to"`
+	From            string                 `json:"from"`
+	Resource        string                 `json:"resource"`
+	Action          string                 `json:"action"`
+	PublishResponse bool                   `json:"publishResourcec"`
+	TransId         string                 `json:"transId"`
+	Properties      NotificationProperties `json:"properties"`
 }
