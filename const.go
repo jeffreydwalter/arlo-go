@@ -1,6 +1,8 @@
-package arlo
+package arlo_golang
 
 const (
+	TransIdPrefix = "web"
+
 	BaseUrl               = "https://arlo.netgear.com/hmsweb"
 	LoginUri              = "/login/v2"
 	LogoutUri             = "/logout"
@@ -26,4 +28,8 @@ const (
 	DeviceStartRecordUri  = "/users/devices/startRecord"
 	DeviceStopRecordUri   = "/users/devices/stopRecord"
 	DeviceStartStreamUri  = "/users/devices/startStream"
+
+	DeviceTypeBasestation = "basestation"
+	DeviceTypeCamera      = "camera"
+	DeviceTypeArloQ       = "arloq"
 )

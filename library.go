@@ -1,4 +1,4 @@
-package arlo
+package arlo_golang
 
 import (
 	"time"

@@ -1,6 +1,15 @@
-package arlo
+package arlo_golang
 
 import (
+	"fmt"
+	"log"
+	"math"
+	"math/rand"
+	"strconv"
+	"strings"
+	"time"
+
+	"github.com/jeffreydwalter/arlo-golang/internal/util"
 	"github.com/pkg/errors"
 )
 
@@ -31,6 +40,18 @@ type Friend struct {
 	Id           string      `json:"id"`
 }
 
+func GenTransId() string {
+
+	source := rand.NewSource(time.Now().UnixNano())
+	random := rand.New(source)
+
+	e := random.Float64() * math.Pow(2, 32)
+
+	ms := time.Now().UnixNano() / (int64(time.Millisecond) / int64(time.Nanosecond))
+
+	return fmt.Sprintf("%s!%s!%s", TransIdPrefix, strings.ToLower(util.FloatToHex(e)), strconv.Itoa(int(ms)))
+}
+
 func Login(user string, pass string) (*Arlo, error) {
 
 	a := newArlo(user, pass)
@@ -52,7 +73,7 @@ func Login(user string, pass string) (*Arlo, error) {
 		a.client.BaseHttpHeader.Add("Authorization", loginResponse.Data.Token)
 
 		// Save the account info with the Arlo struct.
-		a.Account = &loginResponse.Data
+		a.Account = loginResponse.Data
 
 		if deviceResponse, err := a.GetDevices(); err != nil {
 			return nil, err
@@ -61,12 +82,18 @@ func Login(user string, pass string) (*Arlo, error) {
 				return nil, err
 			}
 
-			// Cache the devices as their respective types.
-			a.Basestations = deviceResponse.Data.Basestations()
-			a.Cameras = deviceResponse.Data.Cameras()
-
 			// Set the XCloudId header for future requests. You can override this on a per-request basis if needed.
 			a.client.BaseHttpHeader.Add("xCloudId", deviceResponse.Data[0].XCloudId)
+
+			// Cache the devices as their respective types.
+			a.Cameras = deviceResponse.Data.GetCameras()
+			a.Basestations = deviceResponse.Data.GetBasestations()
+			// Connect each basestation to the EventStream.
+			for i := range a.Basestations {
+				a.Basestations[i].connect(a)
+			}
+
+			log.Printf("HERE: %v", util.PrettyPrint(a.Basestations))
 		}
 	} else {
 		return nil, errors.New("failed to login")

@@ -1,6 +1,9 @@
-package arlo
+package arlo_golang
 
 import (
+	"fmt"
+	"strings"
+
 	"github.com/pkg/errors"
 )
 
@@ -25,24 +28,11 @@ type Device struct {
 	UserRole           string     `json:"userRole"`
 	InterfaceSchemaVer string     `json:"interfaceSchemaVer"`
 	DeviceId           string     `json:"deviceId"`
+	Metadata           interface{}
 }
 
 // Devices is an array of Device objects.
 type Devices []Device
-
-// A Basestation is a Device that's not type "camera" (basestation, arloq, arloqs, etc.).
-// This type is here just for semantics. Some methods explicitly require a device of a certain type.
-type Basestation Device
-
-// Basestations is an array of Basestation objects.
-type Basestations []Basestation
-
-// A Camera is a Device of type "camera".
-// This type is here just for semantics. Some methods explicitly require a device of a certain type.
-type Camera Device
-
-// Cameras is an array of Camera objects.
-type Cameras []Camera
 
 // A DeviceOrder holds a map of device ids and a numeric index. The numeric index is the device order.
 // Device order is mainly used by the UI to determine which order to show the devices.
@@ -69,32 +59,51 @@ func (ds *Devices) Find(deviceId string) *Device {
 	return nil
 }
 
-// Basestations returns a Basestations object containing all devices that are NOT type "camera".
-// I did this because some device types, like arloq, don't have a basestation.
-// So, when interacting with them you must treat them like a basestation and a camera.
-// Cameras also includes decvices of this type, so you can get the same data there or cast.
-func (ds *Devices) Basestations() *Basestations {
-	var basestations Basestations
+func (ds *Devices) FindCameras(basestationId string) *Cameras {
+	cs := new(Cameras)
 	for _, d := range *ds {
-		if d.DeviceType != "camera" {
-			basestations = append(basestations, Basestation(d))
+		if d.ParentId == basestationId {
+			*cs = append(*cs, Camera(d))
 		}
 	}
-	return &basestations
+
+	return cs
 }
 
-// Cameras returns a Cameras object containing all devices that are of type "camera".
+func (d Device) IsBasestation() bool {
+	return d.DeviceType == DeviceTypeBasestation
+}
+
+func (d Device) IsCamera() bool {
+	return d.DeviceType == DeviceTypeCamera
+}
+
+// GetBasestations returns a Basestations object containing all devices that are NOT type "camera".
+// I did this because some device types, like arloq, don't have a basestation.
+// So, when interacting with them you must treat them like a basestation and a camera.
+// Cameras also includes devices of this type, so you can get the same data there or cast.
+func (ds *Devices) GetBasestations() Basestations {
+	var basestations Basestations
+	for _, d := range *ds {
+		if !d.IsCamera() {
+			basestations = append(basestations, Basestation{Device: d})
+		}
+	}
+	return basestations
+}
+
+// GetCameras returns a Cameras object containing all devices that are of type "camera".
 // I did this because some device types, like arloq, don't have a basestation.
 // So, when interacting with them you must treat them like a basestation and a camera.
 // Basestations also includes decvices of this type, so you can get the same data there or cast.
-func (ds *Devices) Cameras() *Cameras {
+func (ds *Devices) GetCameras() Cameras {
 	var cameras Cameras
 	for _, d := range *ds {
-		if d.DeviceType != "basestation" {
+		if !d.IsBasestation() {
 			cameras = append(cameras, Camera(d))
 		}
 	}
-	return &cameras
+	return cameras
 }
 
 // GetDevices returns an array of all devices.
@@ -159,30 +168,91 @@ func (a *Arlo) UpdateDisplayOrder(d DeviceOrder) (*Status, error) {
 // You will need the to install a library to handle streaming of this protocol: https://pypi.python.org/pypi/python-librtmp
 //
 // The request to /users/devices/startStream returns:
-// NOTE: { "url":"rtmps://vzwow09-z2-prod.vz.netgear.com:80/vzmodulelive?egressToken=b1b4b675_ac03_4182_9844_043e02a44f71&userAgent=web&cameraId=48B4597VD8FF5_1473010750131" }
-func (a *Arlo) StartStream(c Camera) (*StartStreamResponse, error) {
+// NOTE: { "url":"rtsp://vzwow09-z2-prod.vz.netgear.com:80/vzmodulelive?egressToken=b1b4b675_ac03_4182_9844_043e02a44f71&userAgent=web&cameraId=48B4597VD8FF5_1473010750131" }
+func (a *Arlo) StartStream(c Camera) (*StreamResponse, error) {
 
-	var n Notification
-	n.To = c.ParentId
-	n.From = c.UserId
-	n.Resource = "cameras/" + c.DeviceId
-	n.Action = "set"
-	n.PublishResponse = true
-	n.TransId = ""
-	n.Properties.ActivityState = "startUserStream"
-	n.Properties.CameraId = c.DeviceId
+	body := map[string]interface{}{
+		"to":              c.ParentId,
+		"from":            fmt.Sprintf("%s_%s", c.UserId, TransIdPrefix),
+		"resource":        fmt.Sprintf("cameras/%s", c.DeviceId),
+		"action":          "set",
+		"publishResponse": true,
+		"transId":         GenTransId(),
+		"properties": map[string]string{
+			"activityState": "startUserStream",
+			"cameraId":      c.DeviceId,
+		},
+	}
 
-	// {"to":camera.get('parentId'),"from":self.user_id+"_web","resource":"cameras/"+camera.get('deviceId'),"action":"set","publishResponse":True,"transId":self.genTransId(),"properties":{"activityState":"startUserStream","cameraId":camera.get('deviceId')}}, headers={"xcloudId":camera.get('xCloudId')}
-	resp, err := a.client.Post(DeviceStartStreamUri, n, nil)
+	resp, err := a.client.Post(DeviceStartStreamUri, body, nil)
 
 	if err != nil {
 		return nil, errors.WithMessage(err, "failed to start stream")
 	}
 
-	var startStreamResponse StartStreamResponse
-	if err := resp.Decode(&startStreamResponse); err != nil {
+	var streamResponse StreamResponse
+	if err := resp.Decode(&streamResponse); err != nil {
 		return nil, err
 	}
 
-	return &startStreamResponse, nil
+	streamResponse.Data.Url = strings.Replace(streamResponse.Data.Url, "rtsp://", "rtsps://", 1)
+
+	return &streamResponse, nil
 }
+
+// TakeSnapshot causes the camera to record a snapshot.
+func (a *Arlo) TakeSnapshot(c Camera) (*StreamResponse, error) {
+
+	stream, err := a.StartStream(c)
+	if err != nil {
+		return nil, errors.WithMessage(err, "failed to take snapshot")
+	}
+
+	body := map[string]string{"deviceId": c.DeviceId, "parentId": c.ParentId, "xcloudId": c.XCloudId, "olsonTimeZone": c.Properties.OlsonTimeZone}
+	resp, err := a.client.Post(DeviceTakeSnapshotUri, body, nil)
+	if err != nil {
+		return nil, errors.WithMessage(err, "failed to take snapshot")
+	}
+
+	var status Status
+	if err := resp.Decode(&status); err != nil {
+		return nil, err
+	}
+
+	streamResponse := StreamResponse{stream.Data, &status}
+	return &streamResponse, nil
+}
+
+// StartRecording causes the camera to start recording and returns a url that you must start reading from using ffmpeg
+// or something similar.
+func (a *Arlo) StartRecording(c Camera) (*StreamResponse, error) {
+
+	stream, err := a.StartStream(c)
+	if err != nil {
+		return nil, errors.WithMessage(err, "failed to start recording")
+	}
+
+	body := map[string]string{"deviceId": c.DeviceId, "parentId": c.ParentId, "xcloudId": c.XCloudId, "olsonTimeZone": c.Properties.OlsonTimeZone}
+	resp, err := a.client.Post(DeviceStartRecordUri, body, nil)
+	if err != nil {
+		return nil, errors.WithMessage(err, "failed to start recording")
+	}
+
+	var status Status
+	if err := resp.Decode(&status); err != nil {
+		return nil, err
+	}
+
+	streamResponse := StreamResponse{stream.Data, &status}
+	return &streamResponse, nil
+}
+
+/*
+##
+# This function causes the camera to stop recording.
+#
+# You can get the timezone from GetDevices().
+##
+func (a *Arlo) StopRecording(camera):
+return a.client.Post('https://arlo.netgear.com/hmsweb/users/devices/stopRecord', {'xcloudId':camera.get('xCloudId'),'parentId':camera.get('parentId'),'deviceId':camera.get('deviceId'),'olsonTimeZone':camera.get('properties', {}).get('olsonTimeZone')}, headers={"xcloudId":camera.get('xCloudId')})
+*/

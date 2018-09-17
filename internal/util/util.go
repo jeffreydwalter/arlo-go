@@ -3,6 +3,8 @@ package util
 import (
 	"encoding/json"
 	"fmt"
+	"net/http"
+	"strconv"
 )
 
 func PrettyPrint(data interface{}) string {
@@ -13,13 +15,64 @@ func PrettyPrint(data interface{}) string {
 	return fmt.Sprint(string(j))
 }
 
-const TransIdPrefix = "web"
+func FloatToHex(x float64) string {
+	var result []byte
+	quotient := int(x)
+	fraction := x - float64(quotient)
 
-func GenTransId(transType string) {
-	/*
-		func divmod(numerator, denominator int64) (quotient, remainder int64) {
-		    quotient = numerator / denominator // integer division, decimals are truncated
-		    remainder = numerator % denominator
-		    return
-		}*/
+	for quotient > 0 {
+		quotient = int(x / 16)
+		remainder := int(x - (float64(quotient) * 16))
+
+		if remainder > 9 {
+			result = append([]byte{byte(remainder + 55)}, result...)
+		} else {
+			for _, c := range strconv.Itoa(int(remainder)) {
+				result = append([]byte{byte(c)}, result...)
+			}
+		}
+
+		x = float64(quotient)
+	}
+
+	if fraction == 0 {
+		return string(result)
+	}
+
+	result = append(result, '.')
+
+	for fraction > 0 {
+		fraction = fraction * 16
+		integer := int(fraction)
+		fraction = fraction - float64(integer)
+
+		if integer > 9 {
+			result = append(result, byte(integer+55))
+		} else {
+			for _, c := range strconv.Itoa(int(integer)) {
+				result = append(result, byte(c))
+			}
+		}
+	}
+
+	return string(result)
+}
+
+func HeaderToArray(header http.Header) (res []string) {
+	for name, values := range header {
+		for _, value := range values {
+			res = append(res, fmt.Sprintf("%s: %s", name, value))
+		}
+	}
+	return
+}
+
+func HeaderToMap(header http.Header) map[string]string {
+	h := make(map[string]string)
+	for name, values := range header {
+		for _, value := range values {
+			h[name] = value
+		}
+	}
+	return h
 }

@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"io"
-	"log"
 	"net/http"
 	"net/http/cookiejar"
 	"net/url"
@@ -14,8 +13,8 @@ import (
 
 type Client struct {
 	BaseURL        *url.URL
-	BaseHttpHeader http.Header
-	httpClient     http.Client
+	BaseHttpHeader *http.Header
+	HttpClient     *http.Client
 }
 
 func NewClient(baseurl string) (*Client, error) {
@@ -40,8 +39,8 @@ func NewClient(baseurl string) (*Client, error) {
 
 	return &Client{
 		BaseURL:        u,
-		BaseHttpHeader: header,
-		httpClient:     http.Client{Jar: jar},
+		BaseHttpHeader: &header,
+		HttpClient:     &http.Client{Jar: jar},
 	}, nil
 }
 
@@ -79,14 +78,14 @@ func (c *Client) newRequest(method string, uri string, body interface{}, header 
 			return nil, errors.Wrap(err, "failed to create request object")
 		}
 	}
-	log.Printf("JSON: %v", buf)
+	// log.Printf("JSON: %v", buf)
 	u := c.BaseURL.String() + uri
 	req, err := http.NewRequest(method, u, buf)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to create request object")
 	}
 
-	for k, v := range c.BaseHttpHeader {
+	for k, v := range *c.BaseHttpHeader {
 		for _, h := range v {
 			//fmt.Printf("Adding header (%s): (%s - %s)\n\n", u, k, h)
 			req.Header.Add(k, h)
@@ -114,15 +113,15 @@ func (c *Client) newResponse(resp *http.Response) (*Response, error) {
 
 func (c *Client) do(req *Request) (*Response, error) {
 
-	//fmt.Printf("\n\nCOOKIES (%s): %v\n\n", req.URL, c.httpClient.Jar.Cookies(req.URL))
+	//fmt.Printf("\n\nCOOKIES (%s): %v\n\n", req.URL, c.HttpClient.Jar.Cookies(req.URL))
 	//fmt.Printf("\n\nHEADERS (%s): %v\n\n", req.URL, req.Header)
 
-	resp, err := c.httpClient.Do(&req.Request)
+	resp, err := c.HttpClient.Do(&req.Request)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to execute http request")
 	}
 
-	if resp.StatusCode >= 400 {
+	if resp.StatusCode >= http.StatusBadRequest {
 		defer resp.Body.Close()
 		return nil, errors.New("http request failed with status: " + resp.Status)
 	}
