@@ -2,7 +2,6 @@ package arlo_golang
 
 import (
 	"fmt"
-	"log"
 	"math"
 	"math/rand"
 	"strconv"
@@ -58,7 +57,6 @@ func Login(user string, pass string) (*Arlo, error) {
 
 	body := map[string]string{"email": a.user, "password": a.pass}
 	resp, err := a.client.Post(LoginUri, body, nil)
-
 	if err != nil {
 		return nil, errors.WithMessage(err, "login request failed")
 	}
@@ -72,6 +70,12 @@ func Login(user string, pass string) (*Arlo, error) {
 		// Cache the auth token.
 		a.client.BaseHttpHeader.Add("Authorization", loginResponse.Data.Token)
 
+		// Add other important headers.
+		a.client.BaseHttpHeader.Add("DNT", "1")
+		a.client.BaseHttpHeader.Add("schemaVersion", "1")
+		a.client.BaseHttpHeader.Add("Host", "arlo.netgear.com")
+		a.client.BaseHttpHeader.Add("Referer", "https://arlo.netgear.com/")
+
 		// Save the account info with the Arlo struct.
 		a.Account = loginResponse.Data
 
@@ -83,17 +87,16 @@ func Login(user string, pass string) (*Arlo, error) {
 			}
 
 			// Set the XCloudId header for future requests. You can override this on a per-request basis if needed.
-			a.client.BaseHttpHeader.Add("xCloudId", deviceResponse.Data[0].XCloudId)
+			a.client.BaseHttpHeader.Add("xcloudId", deviceResponse.Data[0].XCloudId)
 
 			// Cache the devices as their respective types.
 			a.Cameras = deviceResponse.Data.GetCameras()
 			a.Basestations = deviceResponse.Data.GetBasestations()
 			// Connect each basestation to the EventStream.
 			for i := range a.Basestations {
-				a.Basestations[i].connect(a)
+				a.Basestations[i].arlo = a
+				a.Basestations[i].Subscribe()
 			}
-
-			log.Printf("HERE: %v", util.PrettyPrint(a.Basestations))
 		}
 	} else {
 		return nil, errors.New("failed to login")
@@ -105,7 +108,6 @@ func Login(user string, pass string) (*Arlo, error) {
 func (a *Arlo) Logout() (*Status, error) {
 
 	resp, err := a.client.Put(LogoutUri, nil, nil)
-
 	if err != nil {
 		return nil, errors.WithMessage(err, "logout request failed")
 	}
@@ -123,7 +125,6 @@ func (a *Arlo) UpdateProfile(firstName, lastName string) (*Status, error) {
 
 	body := map[string]string{"firstName": firstName, "lastName": lastName}
 	resp, err := a.client.Put(UserProfileUri, body, nil)
-
 	if err != nil {
 		return nil, errors.WithMessage(err, "failed to update profile")
 	}

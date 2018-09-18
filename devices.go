@@ -111,10 +111,10 @@ func (ds *Devices) GetCameras() Cameras {
 func (a *Arlo) GetDevices() (*DeviceResponse, error) {
 
 	resp, err := a.client.Get(DevicesUri, nil)
-
 	if err != nil {
 		return nil, errors.WithMessage(err, "failed to get devices")
 	}
+	defer resp.Body.Close()
 
 	var deviceResponse DeviceResponse
 	if err := resp.Decode(&deviceResponse); err != nil {
@@ -132,11 +132,12 @@ func (a *Arlo) GetDevices() (*DeviceResponse, error) {
 func (a *Arlo) UpdateDeviceName(d Device, name string) (*Status, error) {
 
 	body := map[string]string{"deviceId": d.DeviceId, "deviceName": name, "parentId": d.ParentId}
-	resp, err := a.client.Put(DeviceRenameUri, body, nil)
 
+	resp, err := a.client.Put(DeviceRenameUri, body, nil)
 	if err != nil {
 		return nil, errors.WithMessage(err, "failed to update device name")
 	}
+	defer resp.Body.Close()
 
 	var status Status
 	if err := resp.Decode(&status); err != nil {
@@ -155,6 +156,7 @@ func (a *Arlo) UpdateDisplayOrder(d DeviceOrder) (*Status, error) {
 	if err != nil {
 		return nil, errors.WithMessage(err, "failed to update display order")
 	}
+	defer resp.Body.Close()
 
 	var status Status
 	if err := resp.Decode(&status); err != nil {
@@ -185,10 +187,10 @@ func (a *Arlo) StartStream(c Camera) (*StreamResponse, error) {
 	}
 
 	resp, err := a.client.Post(DeviceStartStreamUri, body, nil)
-
 	if err != nil {
 		return nil, errors.WithMessage(err, "failed to start stream")
 	}
+	defer resp.Body.Close()
 
 	var streamResponse StreamResponse
 	if err := resp.Decode(&streamResponse); err != nil {
@@ -209,10 +211,12 @@ func (a *Arlo) TakeSnapshot(c Camera) (*StreamResponse, error) {
 	}
 
 	body := map[string]string{"deviceId": c.DeviceId, "parentId": c.ParentId, "xcloudId": c.XCloudId, "olsonTimeZone": c.Properties.OlsonTimeZone}
+
 	resp, err := a.client.Post(DeviceTakeSnapshotUri, body, nil)
 	if err != nil {
 		return nil, errors.WithMessage(err, "failed to take snapshot")
 	}
+	defer resp.Body.Close()
 
 	var status Status
 	if err := resp.Decode(&status); err != nil {
@@ -233,10 +237,12 @@ func (a *Arlo) StartRecording(c Camera) (*StreamResponse, error) {
 	}
 
 	body := map[string]string{"deviceId": c.DeviceId, "parentId": c.ParentId, "xcloudId": c.XCloudId, "olsonTimeZone": c.Properties.OlsonTimeZone}
+
 	resp, err := a.client.Post(DeviceStartRecordUri, body, nil)
 	if err != nil {
 		return nil, errors.WithMessage(err, "failed to start recording")
 	}
+	defer resp.Body.Close()
 
 	var status Status
 	if err := resp.Decode(&status); err != nil {

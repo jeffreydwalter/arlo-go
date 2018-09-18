@@ -53,7 +53,7 @@ type StreamUrl struct {
 type NotifyPayload struct {
 	Action          string      `json:"action,omitempty"`
 	Resource        string      `json:"resource,omitempty"`
-	PublishResponse bool        `json:"publishResponse,omitempty"`
+	PublishResponse bool        `json:"publishResponse"`
 	Properties      interface{} `json:"properties,omitempty"`
 	TransId         string      `json:"transId"`
 	From            string      `json:"from"`

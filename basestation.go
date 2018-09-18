@@ -1,9 +1,7 @@
 package arlo_golang
 
 import (
-	"encoding/json"
 	"fmt"
-	"time"
 
 	"github.com/jeffreydwalter/arlo-golang/internal/util"
 	"github.com/pkg/errors"
@@ -38,14 +36,39 @@ type BaseStationMetadata struct {
 type Basestation struct {
 	Device
 	eventStream *EventStream
+	arlo        *Arlo
 }
 
 // Basestations is an array of Basestation objects.
 type Basestations []Basestation
 
-func (b *Basestation) connect(a *Arlo) {
-	b.eventStream = NewEventStream(BaseUrl+fmt.Sprintf(SubscribeUri, a.Account.Token), util.HeaderToMap(*a.client.BaseHttpHeader))
+func (b *Basestation) Subscribe() (*Status, error) {
+	b.eventStream = NewEventStream(BaseUrl+fmt.Sprintf(SubscribeUri, b.arlo.Account.Token), b.arlo.client.HttpClient, util.HeaderToMap(*b.arlo.client.BaseHttpHeader))
 	b.eventStream.Listen()
+
+	transId := GenTransId()
+
+	body := NotifyPayload{
+		Action:          "set",
+		Resource:        fmt.Sprintf("subscriptions/%s_%s", b.UserId, "web"),
+		PublishResponse: false,
+		Properties:      map[string][]string{"devices": []string{b.DeviceId}},
+		TransId:         transId,
+		From:            fmt.Sprintf("%s_%s", b.UserId, TransIdPrefix),
+		To:              b.DeviceId,
+	}
+
+	resp, err := b.arlo.client.Post(fmt.Sprintf(NotifyUri, b.DeviceId), body, nil)
+	if err != nil {
+		return nil, errors.WithMessage(err, "failed to subscribe to the event stream")
+	}
+
+	var status Status
+	if err := resp.Decode(&status); err != nil {
+		return nil, err
+	}
+
+	return &status, nil
 }
 
 /*
@@ -64,7 +87,7 @@ func (b *Basestation) connect(a *Arlo) {
   "id":"XXX-XXXXXXX"
 }
 */
-func (a *Arlo) GetBasestationState(b Basestation) (*NotifyResponse, error) {
+func (b *Basestation) GetState() (*NotifyResponse, error) {
 
 	transId := GenTransId()
 
@@ -72,37 +95,31 @@ func (a *Arlo) GetBasestationState(b Basestation) (*NotifyResponse, error) {
 		Action:          "get",
 		Resource:        "basestation",
 		PublishResponse: false,
-		Properties:      map[string]string{},
 		TransId:         transId,
 		From:            fmt.Sprintf("%s_%s", b.UserId, TransIdPrefix),
 		To:              b.DeviceId,
 	}
 
+	//fmt.Printf("BODY: %+v\n", body)
+	//fmt.Printf("HEADERS: %+v\n", a.client.BaseHttpHeader)
+
+	fmt.Println("Subscribing to the eventstream.")
 	b.eventStream.Subscriptions[transId] = new(Subscriber)
 
-	for b.eventStream.Connected == false {
-		fmt.Println("Not connected yet.")
-		time.Sleep(1000 * time.Millisecond)
-	}
-	fmt.Println("Connected now.")
-
-	resp, err := a.client.Post(fmt.Sprintf(NotifyUri, b.DeviceId), body, nil)
+	resp, err := b.arlo.client.Post(fmt.Sprintf(NotifyUri, b.DeviceId), body, nil)
 	if err != nil {
-		return nil, errors.WithMessage(err, "failed to start stream")
+		return nil, errors.WithMessage(err, "failed to get basestation state")
 	}
 
-	ep := &NotifyResponse{}
-	err = json.NewDecoder(resp.Body).Decode(ep)
-	if err != nil {
-		return nil, errors.WithMessage(err, "failed to decode body")
+	var status Status
+	if err := resp.Decode(&status); err != nil {
+		return nil, err
 	}
 
-	for {
-		fmt.Println("Subscribing to the eventstream.")
-		select {
-		case notifyResponse := <-*b.eventStream.Subscriptions[transId]:
-			fmt.Println("Recieved a response from the subscription.")
-			return &notifyResponse, nil
-		}
+	if !status.Success {
+		return nil, errors.New("failed to get basestation status")
 	}
+
+	notifyResponse := <-*b.eventStream.Subscriptions[transId]
+	return &notifyResponse, nil
 }

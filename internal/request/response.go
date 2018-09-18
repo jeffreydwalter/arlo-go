@@ -19,7 +19,6 @@ type Response struct {
 func (resp *Response) GetContentType() (string, error) {
 
 	mediaType, _, err := mime.ParseMediaType(resp.Header.Get("Content-Type"))
-
 	if err != nil {
 		return "", errors.Wrap(err, "failed to get content type")
 	}

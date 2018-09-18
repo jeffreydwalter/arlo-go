@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"log"
+	"net/http"
 	"sync"
 
 	"github.com/pkg/errors"
@@ -12,11 +12,11 @@ import (
 	"github.com/r3labs/sse"
 )
 
-var FAILED_TO_PUBLISH = errors.New("Failed to publish")
-
-var FAILED_TO_DECODE_JSON = errors.New("Failed to decode JSON")
-
-var FAILED_TO_SUBSCRIBE = errors.New("Failed to subscribe to SSEClient")
+var (
+	FAILED_TO_PUBLISH     = errors.New("Failed to publish")
+	FAILED_TO_DECODE_JSON = errors.New("Failed to decode JSON")
+	FAILED_TO_SUBSCRIBE   = errors.New("Failed to subscribe to SSEClient")
+)
 
 type Subscriber chan NotifyResponse
 
@@ -33,9 +33,10 @@ type EventStream struct {
 	sync.Mutex
 }
 
-func NewEventStream(url string, headers map[string]string) *EventStream {
+func NewEventStream(url string, client *http.Client, headers map[string]string) *EventStream {
 
 	SSEClient := sse.NewClient(url)
+	SSEClient.Connection = client
 	SSEClient.Headers = headers
 
 	return &EventStream{
@@ -49,34 +50,12 @@ func NewEventStream(url string, headers map[string]string) *EventStream {
 func (e *EventStream) Listen() {
 
 	go func() {
-		err := e.SSEClient.SubscribeChan("", e.Events)
+		err := e.SSEClient.SubscribeChanRaw(e.Events)
 		if err != nil {
 			fmt.Println(FAILED_TO_SUBSCRIBE)
 			e.ErrorChan <- FAILED_TO_SUBSCRIBE
 		}
 	}()
-
-	for event := range e.Events {
-		fmt.Println("Got event message here.")
-		fmt.Printf("EVENT: %s\n", event.Event)
-		fmt.Printf("DATA: %s\n", event.Data)
-
-		if event.Data != nil {
-			notifyResponse := &NotifyResponse{}
-			b := bytes.NewBuffer(event.Data)
-			err := json.NewDecoder(b).Decode(notifyResponse)
-			if err != nil {
-				e.ErrorChan <- errors.WithMessage(err, "failed to decode JSON")
-				break
-			}
-
-			if notifyResponse.Status == "connected" {
-				e.Connected = true
-				fmt.Println("Connected.")
-				break
-			}
-		}
-	}
 
 	go func() {
 		for event := range e.Events {
@@ -93,6 +72,7 @@ func (e *EventStream) Listen() {
 					break
 				}
 
+				fmt.Printf("%s\n", notifyResponse)
 				if notifyResponse.Status == "connected" {
 					fmt.Println("Connected.")
 					e.Connected = true
@@ -100,7 +80,7 @@ func (e *EventStream) Listen() {
 					fmt.Println("Disconnected.")
 					e.Connected = false
 				} else {
-					fmt.Printf("Message for transId: %s", notifyResponse.TransId)
+					fmt.Printf("Message for transId: %s\n", notifyResponse.TransId)
 					if subscriber, ok := e.Subscriptions[notifyResponse.TransId]; ok {
 						e.Lock()
 						*subscriber <- *notifyResponse
@@ -112,36 +92,9 @@ func (e *EventStream) Listen() {
 						fmt.Println("Throwing away message.")
 					}
 				}
+			} else {
+				fmt.Printf("Event data was nil.\n")
 			}
 		}
 	}()
-	/*
-		go func() {
-
-			fmt.Println("go func to recieve a subscription.")
-			for {
-				fmt.Println("go func for loop to recieve a subscription.")
-				select {
-				case s := <-e.Subscriptions:
-					if resp, ok := e.Responses[s.transId]; ok {
-						fmt.Println("Recieved a subscription, sending response.")
-						s.ResponseChan <- resp
-						e.Lock()
-						delete(e.Responses, s.transId)
-						e.Unlock()
-					} else {
-						fmt.Println("Recieved a subscription error, sending error response.")
-						e.ErrorChan <- FAILED_TO_PUBLISH
-						break
-					}
-				}
-			}
-		}()
-	*/
-}
-
-func (e *EventStream) verbose(params ...interface{}) {
-	if e.Verbose {
-		log.Println(params...)
-	}
 }

@@ -2,20 +2,71 @@
 
 
 [[projects]]
+  digest = "1:7365acd48986e205ccb8652cc746f09c8b7876030d53710ea6ef7d0bd0dcd7ca"
   name = "github.com/pkg/errors"
   packages = ["."]
+  pruneopts = ""
   revision = "645ef00459ed84a119197bfb8d8205042c6df63d"
   version = "v0.8.0"
 
 [[projects]]
+  branch = "master"
+  digest = "1:63eb8e7863bcc41b162d76c3e1b5dd4991fd01f29585017b3a8bab7a5928edd3"
   name = "github.com/r3labs/sse"
   packages = ["."]
-  revision = "ab73c814bbdece537f16e92302cd99d1618d0e0d"
-  version = "1.0.1"
+  pruneopts = ""
+  revision = "ad82e5b42970ce737f0ce61490a1607331299496"
+
+[[projects]]
+  branch = "master"
+  digest = "1:fbdbb6cf8db3278412c9425ad78b26bb8eb788181f26a3ffb3e4f216b314f86a"
+  name = "golang.org/x/net"
+  packages = [
+    "context",
+    "idna",
+    "publicsuffix",
+  ]
+  pruneopts = ""
+  revision = "26e67e76b6c3f6ce91f7c52def5af501b4e0f3a2"
+
+[[projects]]
+  digest = "1:5acd3512b047305d49e8763eef7ba423901e85d5dd2fd1e71778a0ea8de10bd4"
+  name = "golang.org/x/text"
+  packages = [
+    "collate",
+    "collate/build",
+    "internal/colltab",
+    "internal/gen",
+    "internal/tag",
+    "internal/triegen",
+    "internal/ucd",
+    "language",
+    "secure/bidirule",
+    "transform",
+    "unicode/bidi",
+    "unicode/cldr",
+    "unicode/norm",
+    "unicode/rangetable",
+  ]
+  pruneopts = ""
+  revision = "f21a4dfb5e38f5895301dc265a8def02365cc3d0"
+  version = "v0.3.0"
+
+[[projects]]
+  digest = "1:1cf61f0228e64d1bfddaa42bfd1f5047ed3626925b9bea69bbcb9168472dae23"
+  name = "gopkg.in/cenkalti/backoff.v1"
+  packages = ["."]
+  pruneopts = ""
+  revision = "61153c768f31ee5f130071d08fc82b85208528de"
+  version = "v1.1.0"
 
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "559855ebed7f1c0bf0bea2b6f750822d2eb67595d23a2f9006a8302a22b74e47"
+  input-imports = [
+    "github.com/pkg/errors",
+    "github.com/r3labs/sse",
+    "golang.org/x/net/publicsuffix",
+  ]
   solver-name = "gps-cdcl"
   solver-version = 1

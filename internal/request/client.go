@@ -9,6 +9,8 @@ import (
 	"net/url"
 
 	"github.com/pkg/errors"
+
+	"golang.org/x/net/publicsuffix"
 )
 
 type Client struct {
@@ -21,7 +23,7 @@ func NewClient(baseurl string) (*Client, error) {
 	var err error
 	var jar *cookiejar.Jar
 
-	options := cookiejar.Options{}
+	options := cookiejar.Options{PublicSuffixList: publicsuffix.List}
 
 	if jar, err = cookiejar.New(&options); err != nil {
 		return nil, errors.Wrap(err, "failed to create client object")
@@ -33,7 +35,7 @@ func NewClient(baseurl string) (*Client, error) {
 	}
 
 	header := make(http.Header)
-	header.Add("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/61.0.3163.100 Safari/537.36")
+	header.Add("User-Agent", "Mozilla/5.0 (iPhone; CPU iPhone OS 11_1_2 like Mac OS X) AppleWebKit/604.3.5 (KHTML, like Gecko) Mobile/15B202 NETGEAR/v1 (iOS Vuezone)")
 	header.Add("Content-Type", "application/json")
 	header.Add("Accept", "application/json")
 
@@ -78,7 +80,7 @@ func (c *Client) newRequest(method string, uri string, body interface{}, header 
 			return nil, errors.Wrap(err, "failed to create request object")
 		}
 	}
-	// log.Printf("JSON: %v", buf)
+
 	u := c.BaseURL.String() + uri
 	req, err := http.NewRequest(method, u, buf)
 	if err != nil {
