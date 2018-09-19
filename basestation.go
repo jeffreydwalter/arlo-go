@@ -1,9 +1,8 @@
-package arlo_golang
+package arlo
 
 import (
 	"fmt"
 
-	"github.com/jeffreydwalter/arlo-golang/internal/util"
 	"github.com/pkg/errors"
 )
 
@@ -43,7 +42,7 @@ type Basestation struct {
 type Basestations []Basestation
 
 func (b *Basestation) Subscribe() (*Status, error) {
-	b.eventStream = NewEventStream(BaseUrl+fmt.Sprintf(SubscribeUri, b.arlo.Account.Token), b.arlo.client.HttpClient, util.HeaderToMap(*b.arlo.client.BaseHttpHeader))
+	b.eventStream = NewEventStream(BaseUrl+fmt.Sprintf(SubscribeUri, b.arlo.Account.Token), b.arlo.client.HttpClient)
 	b.eventStream.Listen()
 
 	transId := GenTransId()
@@ -71,22 +70,6 @@ func (b *Basestation) Subscribe() (*Status, error) {
 	return &status, nil
 }
 
-/*
- This is an example of the json you would pass in the body to UpdateFriends():
-{
-  "firstName":"Some",
-  "lastName":"Body",
-  "devices":{
-    "XXXXXXXXXXXXX":"Camera 1",
-    "XXXXXXXXXXXXX":"Camera 2 ",
-    "XXXXXXXXXXXXX":"Camera 3"
-  },
-  "lastModified":1463977440911,
-  "adminUser":true,
-  "email":"user@example.com",
-  "id":"XXX-XXXXXXX"
-}
-*/
 func (b *Basestation) GetState() (*NotifyResponse, error) {
 
 	transId := GenTransId()
@@ -100,11 +83,7 @@ func (b *Basestation) GetState() (*NotifyResponse, error) {
 		To:              b.DeviceId,
 	}
 
-	//fmt.Printf("BODY: %+v\n", body)
-	//fmt.Printf("HEADERS: %+v\n", a.client.BaseHttpHeader)
-
-	fmt.Println("Subscribing to the eventstream.")
-	b.eventStream.Subscriptions[transId] = new(Subscriber)
+	b.eventStream.Subscriptions[transId] = make(chan *NotifyResponse)
 
 	resp, err := b.arlo.client.Post(fmt.Sprintf(NotifyUri, b.DeviceId), body, nil)
 	if err != nil {
@@ -120,6 +99,37 @@ func (b *Basestation) GetState() (*NotifyResponse, error) {
 		return nil, errors.New("failed to get basestation status")
 	}
 
-	notifyResponse := <-*b.eventStream.Subscriptions[transId]
-	return &notifyResponse, nil
+	return <-b.eventStream.Subscriptions[transId], nil
+}
+
+func (b *Basestation) GetCameraState() (*NotifyResponse, error) {
+
+	transId := GenTransId()
+
+	body := NotifyPayload{
+		Action:          "get",
+		Resource:        "cameras",
+		PublishResponse: false,
+		TransId:         transId,
+		From:            fmt.Sprintf("%s_%s", b.UserId, TransIdPrefix),
+		To:              b.DeviceId,
+	}
+
+	b.eventStream.Subscriptions[transId] = make(chan *NotifyResponse)
+
+	resp, err := b.arlo.client.Post(fmt.Sprintf(NotifyUri, b.DeviceId), body, nil)
+	if err != nil {
+		return nil, errors.WithMessage(err, "failed to get basestation state")
+	}
+
+	var status Status
+	if err := resp.Decode(&status); err != nil {
+		return nil, err
+	}
+
+	if !status.Success {
+		return nil, errors.New("failed to get basestation status")
+	}
+
+	return <-b.eventStream.Subscriptions[transId], nil
 }

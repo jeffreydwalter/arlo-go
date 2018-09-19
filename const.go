@@ -1,4 +1,4 @@
-package arlo_golang
+package arlo
 
 const (
 	TransIdPrefix = "web"

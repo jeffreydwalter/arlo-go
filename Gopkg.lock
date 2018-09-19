@@ -11,11 +11,11 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:63eb8e7863bcc41b162d76c3e1b5dd4991fd01f29585017b3a8bab7a5928edd3"
+  digest = "1:b44621ef75eb48a8c09e7d6ce4d3f6681534307189c9bc0267c9532094c20a2a"
   name = "github.com/r3labs/sse"
   packages = ["."]
   pruneopts = ""
-  revision = "ad82e5b42970ce737f0ce61490a1607331299496"
+  revision = "507597500aa545836a85909d89a59e50d260f366"
 
 [[projects]]
   branch = "master"

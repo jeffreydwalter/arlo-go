@@ -1,4 +1,4 @@
-package arlo_golang
+package arlo
 
 // UpdateResponse is an intermediate struct used when parsing data from the UpdateProfile() call.
 type Status struct {

@@ -1,4 +1,4 @@
-package arlo_golang
+package arlo
 
 import (
 	"bytes"
@@ -18,31 +18,27 @@ var (
 	FAILED_TO_SUBSCRIBE   = errors.New("Failed to subscribe to SSEClient")
 )
 
-type Subscriber chan NotifyResponse
-
 type EventStream struct {
+	SSEClient     *sse.Client
+	Subscriptions map[string]chan *NotifyResponse
+	Events        chan *sse.Event
+	ErrorChan     chan error
 	Registered    bool
 	Connected     bool
-	SSEClient     *sse.Client
-	Events        chan *sse.Event
-	Subscriptions map[string]*Subscriber
-	ErrorChan     chan error
-	Responses     map[string]NotifyResponse
 	Verbose       bool
 
 	sync.Mutex
 }
 
-func NewEventStream(url string, client *http.Client, headers map[string]string) *EventStream {
+func NewEventStream(url string, client *http.Client) *EventStream {
 
 	SSEClient := sse.NewClient(url)
 	SSEClient.Connection = client
-	SSEClient.Headers = headers
 
 	return &EventStream{
 		SSEClient:     SSEClient,
 		Events:        make(chan *sse.Event),
-		Subscriptions: map[string]*Subscriber{},
+		Subscriptions: make(map[string]chan *NotifyResponse),
 		ErrorChan:     make(chan error, 1),
 	}
 }
@@ -59,9 +55,11 @@ func (e *EventStream) Listen() {
 
 	go func() {
 		for event := range e.Events {
-			fmt.Println("Got event message.")
-			fmt.Printf("EVENT: %X\n", event.Event)
-			fmt.Printf("DATA: %X\n", event.Data)
+			/*
+				fmt.Println("Got event message.")
+				fmt.Printf("EVENT: %s\n", event.Event)
+				fmt.Printf("DATA: %s\n", event.Data)
+			*/
 
 			if event.Data != nil {
 				notifyResponse := &NotifyResponse{}
@@ -72,28 +70,19 @@ func (e *EventStream) Listen() {
 					break
 				}
 
-				fmt.Printf("%s\n", notifyResponse)
 				if notifyResponse.Status == "connected" {
-					fmt.Println("Connected.")
 					e.Connected = true
 				} else if notifyResponse.Status == "disconnected" {
-					fmt.Println("Disconnected.")
 					e.Connected = false
 				} else {
-					fmt.Printf("Message for transId: %s\n", notifyResponse.TransId)
 					if subscriber, ok := e.Subscriptions[notifyResponse.TransId]; ok {
 						e.Lock()
-						*subscriber <- *notifyResponse
-						close(*subscriber)
+						subscriber <- notifyResponse
+						close(subscriber)
 						delete(e.Subscriptions, notifyResponse.TransId)
 						e.Unlock()
-					} else {
-						// Throw away the message.
-						fmt.Println("Throwing away message.")
 					}
 				}
-			} else {
-				fmt.Printf("Event data was nil.\n")
 			}
 		}
 	}()

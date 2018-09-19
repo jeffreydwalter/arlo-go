@@ -1,4 +1,4 @@
-package arlo_golang
+package arlo
 
 import (
 	"github.com/jeffreydwalter/arlo-golang/internal/request"

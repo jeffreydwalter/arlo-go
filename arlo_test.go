@@ -1,1 +1,1 @@
-package arlo_golang
+package arlo

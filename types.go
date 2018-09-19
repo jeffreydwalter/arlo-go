@@ -1,4 +1,4 @@
-package arlo_golang
+package arlo
 
 /*
 // Credentials is the login credential data.
