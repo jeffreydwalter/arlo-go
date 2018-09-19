@@ -70,13 +70,13 @@ func (a *Arlo) GetLibrary(fromDate, toDate time.Time) (*LibraryResponse, error) 
 }
 
 /*
- Delete a single video recording from Arlo.
+ Delete a single video recording from arlo.
 
  All of the date info and device id you need to pass into this method are given in the results of the GetLibrary() call.
 
  NOTE: {"data": [{"createdDate": r.CreatedDate, "utcCreatedDate": r.UtcCreatedDate, "deviceId": r.DeviceId}]} is all that's really required.
 */
-func (a *Arlo) DeleteRecording(r Recording) (*Status, error) {
+func (a *Arlo) DeleteRecording(r Recording) (*Error, error) {
 
 	body := map[string]Library{"data": {r}}
 	resp, err := a.client.Post(LibraryRecycleUri, body, nil)
@@ -84,7 +84,7 @@ func (a *Arlo) DeleteRecording(r Recording) (*Status, error) {
 		return nil, errors.WithMessage(err, "failed to delete recording")
 	}
 
-	var status Status
+	var status Error
 	if err := resp.Decode(&status); err != nil {
 		return nil, err
 	}
@@ -93,13 +93,13 @@ func (a *Arlo) DeleteRecording(r Recording) (*Status, error) {
 }
 
 /*
- Delete a batch of video recordings from Arlo.
+ Delete a batch of video recordings from arlo.
 
  The GetLibrary() call response json can be passed directly to this method if you'd like to delete the same list of videos you queried for.
 
  NOTE: {"data": [{"createdDate": r.CreatedDate, "utcCreatedDate": r.UtcCreatedDate, "deviceId": r.DeviceId}]} is all that's really required.
 */
-func (a *Arlo) BatchDeleteRecordings(l Library) (*Status, error) {
+func (a *Arlo) BatchDeleteRecordings(l Library) (*Error, error) {
 
 	body := map[string]Library{"data": l}
 	resp, err := a.client.Post(LibraryRecycleUri, body, nil)
@@ -107,7 +107,7 @@ func (a *Arlo) BatchDeleteRecordings(l Library) (*Status, error) {
 		return nil, errors.WithMessage(err, "failed to delete recordings")
 	}
 
-	var status Status
+	var status Error
 	if err := resp.Decode(&status); err != nil {
 		return nil, err
 	}

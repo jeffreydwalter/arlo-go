@@ -20,7 +20,7 @@ var (
 
 type EventStream struct {
 	SSEClient     *sse.Client
-	Subscriptions map[string]chan *NotifyResponse
+	Subscriptions map[string]chan *EventStreamResponse
 	Events        chan *sse.Event
 	ErrorChan     chan error
 	Registered    bool
@@ -38,7 +38,7 @@ func NewEventStream(url string, client *http.Client) *EventStream {
 	return &EventStream{
 		SSEClient:     SSEClient,
 		Events:        make(chan *sse.Event),
-		Subscriptions: make(map[string]chan *NotifyResponse),
+		Subscriptions: make(map[string]chan *EventStreamResponse),
 		ErrorChan:     make(chan error, 1),
 	}
 }
@@ -62,7 +62,7 @@ func (e *EventStream) Listen() {
 			*/
 
 			if event.Data != nil {
-				notifyResponse := &NotifyResponse{}
+				notifyResponse := &EventStreamResponse{}
 				b := bytes.NewBuffer(event.Data)
 				err := json.NewDecoder(b).Decode(notifyResponse)
 				if err != nil {

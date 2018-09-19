@@ -2,8 +2,6 @@ package arlo
 
 import (
 	"fmt"
-
-	"github.com/pkg/errors"
 )
 
 type BaseStationMetadata struct {
@@ -35,46 +33,40 @@ type BaseStationMetadata struct {
 type Basestation struct {
 	Device
 	eventStream *EventStream
-	arlo        *Arlo
 }
 
 // Basestations is an array of Basestation objects.
 type Basestations []Basestation
 
-func (b *Basestation) Subscribe() (*Status, error) {
+func (b *Basestation) Subscribe() error {
 	b.eventStream = NewEventStream(BaseUrl+fmt.Sprintf(SubscribeUri, b.arlo.Account.Token), b.arlo.client.HttpClient)
 	b.eventStream.Listen()
 
-	transId := GenTransId()
-
-	body := NotifyPayload{
+	body := Payload{
 		Action:          "set",
-		Resource:        fmt.Sprintf("subscriptions/%s_%s", b.UserId, "web"),
+		Resource:        fmt.Sprintf("subscriptions/%s_%s", b.UserId, TransIdPrefix),
 		PublishResponse: false,
-		Properties:      map[string][]string{"devices": []string{b.DeviceId}},
-		TransId:         transId,
+		Properties:      map[string][1]string{"devices": {b.DeviceId}},
+		TransId:         genTransId(),
 		From:            fmt.Sprintf("%s_%s", b.UserId, TransIdPrefix),
 		To:              b.DeviceId,
 	}
-
-	resp, err := b.arlo.client.Post(fmt.Sprintf(NotifyUri, b.DeviceId), body, nil)
-	if err != nil {
-		return nil, errors.WithMessage(err, "failed to subscribe to the event stream")
-	}
-
-	var status Status
-	if err := resp.Decode(&status); err != nil {
-		return nil, err
-	}
-
-	return &status, nil
+	resp, err := b.arlo.post(fmt.Sprintf(NotifyUri, b.DeviceId), b.XCloudId, body, nil)
+	return checkRequest(*resp, err, "failed to subscribe to the event stream")
 }
 
-func (b *Basestation) GetState() (*NotifyResponse, error) {
+func (b *Basestation) Unsubscribe() error {
+	// TODO: Close channel to stop EventStream.
+	//return errors.New("not implemented")
+	return nil
+}
 
-	transId := GenTransId()
+func (b *Basestation) GetState() (*EventStreamResponse, error) {
+	transId := genTransId()
 
-	body := NotifyPayload{
+	b.eventStream.Subscriptions[transId] = make(chan *EventStreamResponse)
+
+	body := Payload{
 		Action:          "get",
 		Resource:        "basestation",
 		PublishResponse: false,
@@ -83,30 +75,20 @@ func (b *Basestation) GetState() (*NotifyResponse, error) {
 		To:              b.DeviceId,
 	}
 
-	b.eventStream.Subscriptions[transId] = make(chan *NotifyResponse)
-
-	resp, err := b.arlo.client.Post(fmt.Sprintf(NotifyUri, b.DeviceId), body, nil)
-	if err != nil {
-		return nil, errors.WithMessage(err, "failed to get basestation state")
-	}
-
-	var status Status
-	if err := resp.Decode(&status); err != nil {
+	resp, err := b.arlo.post(fmt.Sprintf(NotifyUri, b.DeviceId), b.XCloudId, body, nil)
+	if err := checkRequest(*resp, err, "failed to get basestation state"); err != nil {
 		return nil, err
-	}
-
-	if !status.Success {
-		return nil, errors.New("failed to get basestation status")
 	}
 
 	return <-b.eventStream.Subscriptions[transId], nil
 }
 
-func (b *Basestation) GetCameraState() (*NotifyResponse, error) {
+func (b *Basestation) GetAssociatedCamerasState() (*EventStreamResponse, error) {
+	transId := genTransId()
 
-	transId := GenTransId()
+	b.eventStream.Subscriptions[transId] = make(chan *EventStreamResponse)
 
-	body := NotifyPayload{
+	body := Payload{
 		Action:          "get",
 		Resource:        "cameras",
 		PublishResponse: false,
@@ -115,20 +97,9 @@ func (b *Basestation) GetCameraState() (*NotifyResponse, error) {
 		To:              b.DeviceId,
 	}
 
-	b.eventStream.Subscriptions[transId] = make(chan *NotifyResponse)
-
-	resp, err := b.arlo.client.Post(fmt.Sprintf(NotifyUri, b.DeviceId), body, nil)
-	if err != nil {
-		return nil, errors.WithMessage(err, "failed to get basestation state")
-	}
-
-	var status Status
-	if err := resp.Decode(&status); err != nil {
+	resp, err := b.arlo.post(fmt.Sprintf(NotifyUri, b.DeviceId), b.XCloudId, body, nil)
+	if err := checkRequest(*resp, err, "failed to get camera state"); err != nil {
 		return nil, err
-	}
-
-	if !status.Success {
-		return nil, errors.New("failed to get basestation status")
 	}
 
 	return <-b.eventStream.Subscriptions[transId], nil

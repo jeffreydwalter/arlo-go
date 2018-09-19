@@ -1,39 +1,44 @@
 package arlo
 
-// UpdateResponse is an intermediate struct used when parsing data from the UpdateProfile() call.
-type Status struct {
-	Success bool `json:"success"`
-}
-
 // LoginResponse is an intermediate struct used when parsing data from the Login() call.
 type LoginResponse struct {
 	Data Account
-	*Status
+	Error
 }
 
 // DeviceResponse is an intermediate struct used when parsing data from the GetDevices() call.
 type DeviceResponse struct {
 	Data Devices
-	*Status
+	Error
 }
 
 // LibraryMetaDataResponse is an intermediate struct used when parsing data from the GetLibraryMetaData() call.
 type LibraryMetaDataResponse struct {
 	Data LibraryMetaData
-	*Status
+	Error
 }
 
 type LibraryResponse struct {
 	Data Library
-	*Status
+	Error
 }
 
 type StreamResponse struct {
 	Data StreamUrl
-	*Status
+	Error
 }
 
 type RecordingResponse struct {
 	Data StreamUrl
-	*Status
+	Error
+}
+
+type EventStreamResponse struct {
+	Action     string      `json:"action,omitempty"`
+	Resource   string      `json:"resource,omitempty"`
+	Properties interface{} `json:"properties,omitempty"`
+	TransId    string      `json:"transId"`
+	From       string      `json:"from"`
+	To         string      `json:"to"`
+	Status     string      `json:"status"`
 }

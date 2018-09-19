@@ -35,9 +35,9 @@ func NewClient(baseurl string) (*Client, error) {
 	}
 
 	header := make(http.Header)
-	header.Add("User-Agent", "Mozilla/5.0 (iPhone; CPU iPhone OS 11_1_2 like Mac OS X) AppleWebKit/604.3.5 (KHTML, like Gecko) Mobile/15B202 NETGEAR/v1 (iOS Vuezone)")
-	header.Add("Content-Type", "application/json")
-	header.Add("Accept", "application/json")
+	header.Set("User-Agent", "Mozilla/5.0 (iPhone; CPU iPhone OS 11_1_2 like Mac OS X) AppleWebKit/604.3.5 (KHTML, like Gecko) Mobile/15B202 NETGEAR/v1 (iOS Vuezone)")
+	header.Set("Content-Type", "application/json")
+	header.Set("Accept", "application/json")
 
 	return &Client{
 		BaseURL:        u,
@@ -89,15 +89,15 @@ func (c *Client) newRequest(method string, uri string, body interface{}, header 
 
 	for k, v := range *c.BaseHttpHeader {
 		for _, h := range v {
-			//fmt.Printf("Adding header (%s): (%s - %s)\n\n", u, k, h)
-			req.Header.Add(k, h)
+			//log.Printf("Adding header (%s): (%s - %s)\n\n", u, k, h)
+			req.Header.Set(k, h)
 		}
 	}
 
 	for k, v := range header {
 		for _, h := range v {
-			//fmt.Printf("Adding header (%s): (%s - %s)\n\n", u, k, h)
-			req.Header.Add(k, h)
+			//log.Printf("Adding header (%s): (%s - %s)\n\n", u, k, h)
+			req.Header.Set(k, h)
 		}
 	}
 
@@ -115,8 +115,8 @@ func (c *Client) newResponse(resp *http.Response) (*Response, error) {
 
 func (c *Client) do(req *Request) (*Response, error) {
 
-	//fmt.Printf("\n\nCOOKIES (%s): %v\n\n", req.URL, c.HttpClient.Jar.Cookies(req.URL))
-	//fmt.Printf("\n\nHEADERS (%s): %v\n\n", req.URL, req.Header)
+	//log.Printf("\n\nCOOKIES (%s): %v\n\n", req.URL, c.HttpClient.Jar.Cookies(req.URL))
+	//log.Printf("\n\nHEADERS (%s): %v\n\n", req.URL, req.Header)
 
 	resp, err := c.HttpClient.Do(&req.Request)
 	if err != nil {
