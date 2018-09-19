@@ -94,7 +94,7 @@ func (a *Arlo) GetDevices() (Devices, error) {
 		deviceResponse.Data[i].arlo = a
 	}
 
-	// Unsubscribe all of the basestations to the EventStream.
+	// Unsubscribe all of the basestations from the EventStream.
 	for i := range a.Basestations {
 		if err := a.Basestations[i].Unsubscribe(); err != nil {
 			return nil, errors.WithMessage(err, "failed to get devices")

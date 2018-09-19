@@ -39,7 +39,7 @@ type Library []Recording
 func (a *Arlo) GetLibraryMetaData(fromDate, toDate time.Time) (*LibraryMetaDataResponse, error) {
 
 	body := map[string]string{"dateFrom": fromDate.Format("20060102"), "dateTo": toDate.Format("20060102")}
-	resp, err := a.client.Post(LibraryMetadataUri, body, nil)
+	resp, err := a.post(LibraryMetadataUri, "", body, nil)
 
 	if err != nil {
 		return nil, errors.WithMessage(err, "failed to get library metadata")
@@ -56,7 +56,7 @@ func (a *Arlo) GetLibraryMetaData(fromDate, toDate time.Time) (*LibraryMetaDataR
 func (a *Arlo) GetLibrary(fromDate, toDate time.Time) (*LibraryResponse, error) {
 
 	body := map[string]string{"dateFrom": fromDate.Format("20060102"), "dateTo": toDate.Format("20060102")}
-	resp, err := a.client.Post(LibraryUri, body, nil)
+	resp, err := a.post(LibraryUri, "", body, nil)
 	if err != nil {
 		return nil, errors.WithMessage(err, "failed to get library")
 	}
@@ -79,7 +79,7 @@ func (a *Arlo) GetLibrary(fromDate, toDate time.Time) (*LibraryResponse, error) 
 func (a *Arlo) DeleteRecording(r Recording) (*Error, error) {
 
 	body := map[string]Library{"data": {r}}
-	resp, err := a.client.Post(LibraryRecycleUri, body, nil)
+	resp, err := a.post(LibraryRecycleUri, "", body, nil)
 	if err != nil {
 		return nil, errors.WithMessage(err, "failed to delete recording")
 	}
@@ -102,7 +102,7 @@ func (a *Arlo) DeleteRecording(r Recording) (*Error, error) {
 func (a *Arlo) BatchDeleteRecordings(l Library) (*Error, error) {
 
 	body := map[string]Library{"data": l}
-	resp, err := a.client.Post(LibraryRecycleUri, body, nil)
+	resp, err := a.post(LibraryRecycleUri, "", body, nil)
 	if err != nil {
 		return nil, errors.WithMessage(err, "failed to delete recordings")
 	}

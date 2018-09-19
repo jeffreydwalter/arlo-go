@@ -3,7 +3,6 @@ package arlo
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"sync"
 
@@ -51,7 +50,6 @@ func (e *EventStream) Listen() (connected chan bool) {
 	go func() {
 		err := e.SSEClient.SubscribeChanRaw(e.Events)
 		if err != nil {
-			fmt.Println(FAILED_TO_SUBSCRIBE)
 			e.Error <- FAILED_TO_SUBSCRIBE
 		}
 
