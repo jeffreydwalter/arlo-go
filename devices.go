@@ -10,7 +10,7 @@ type Device struct {
 	ArloMobilePlanThreshold       int          `json:"arloMobilePlanThreshold"`
 	Connectivity                  Connectivity `json:"connectivity"`
 	CriticalBatteryState          bool         `json:"criticalBatteryState"`
-	DateCreated                   float64      `json:"dateCreated"`
+	DateCreated                   int64        `json:"dateCreated"`
 	DeviceId                      string       `json:"deviceId"`
 	DeviceName                    string       `json:"deviceName"`
 	DeviceType                    string       `json:"deviceType"`
@@ -19,7 +19,7 @@ type Device struct {
 	InterfaceVersion              string       `json:"interfaceVersion"`
 	InterfaceSchemaVer            string       `json:"interfaceSchemaVer"`
 	LastImageUploaded             string       `json:"lastImageUploaded"`
-	LastModified                  float64      `json:"lastModified"`
+	LastModified                  int64        `json:"lastModified"`
 	MigrateActivityZone           bool         `json:"migrateActivityZone"`
 	MobileCarrier                 string       `json:"mobileCarrier"`
 	MobileTrialUsed               bool         `json:"mobileTrialUsed"`
@@ -122,5 +122,5 @@ func (d *Device) UpdateDeviceName(name string) error {
 
 	body := map[string]string{"deviceId": d.DeviceId, "deviceName": name, "parentId": d.ParentId}
 	resp, err := d.arlo.put(DeviceRenameUri, d.XCloudId, body, nil)
-	return checkRequest(*resp, err, "failed to update device name")
+	return checkRequest(resp, err, "failed to update device name")
 }

@@ -2,8 +2,6 @@ package arlo
 
 import (
 	"time"
-
-	"github.com/pkg/errors"
 )
 
 // LibraryMetaData is the library meta data.
@@ -36,37 +34,34 @@ type Recording struct {
 
 type Library []Recording
 
-func (a *Arlo) GetLibraryMetaData(fromDate, toDate time.Time) (*LibraryMetaDataResponse, error) {
+func (a *Arlo) GetLibraryMetaData(fromDate, toDate time.Time) (response *LibraryMetaDataResponse, err error) {
 
 	body := map[string]string{"dateFrom": fromDate.Format("20060102"), "dateTo": toDate.Format("20060102")}
 	resp, err := a.post(LibraryMetadataUri, "", body, nil)
-
-	if err != nil {
-		return nil, errors.WithMessage(err, "failed to get library metadata")
-	}
-
-	var libraryMetaDataResponse LibraryMetaDataResponse
-	if err := resp.Decode(&libraryMetaDataResponse); err != nil {
+	if err := checkHttpRequest(resp, err, "failed to get library metadata"); err != nil {
 		return nil, err
 	}
 
-	return &libraryMetaDataResponse, nil
+	if err := resp.Decode(response); err != nil {
+		return nil, err
+	}
+
+	return response, nil
 }
 
-func (a *Arlo) GetLibrary(fromDate, toDate time.Time) (*LibraryResponse, error) {
+func (a *Arlo) GetLibrary(fromDate, toDate time.Time) (response *LibraryResponse, err error) {
 
 	body := map[string]string{"dateFrom": fromDate.Format("20060102"), "dateTo": toDate.Format("20060102")}
 	resp, err := a.post(LibraryUri, "", body, nil)
-	if err != nil {
-		return nil, errors.WithMessage(err, "failed to get library")
-	}
-
-	var libraryResponse LibraryResponse
-	if err := resp.Decode(&libraryResponse); err != nil {
+	if err := checkHttpRequest(resp, err, "failed to get library"); err != nil {
 		return nil, err
 	}
 
-	return &libraryResponse, nil
+	if err := resp.Decode(response); err != nil {
+		return nil, err
+	}
+
+	return response, nil
 }
 
 /*
@@ -76,20 +71,11 @@ func (a *Arlo) GetLibrary(fromDate, toDate time.Time) (*LibraryResponse, error) 
 
  NOTE: {"data": [{"createdDate": r.CreatedDate, "utcCreatedDate": r.UtcCreatedDate, "deviceId": r.DeviceId}]} is all that's really required.
 */
-func (a *Arlo) DeleteRecording(r Recording) (*Error, error) {
+func (a *Arlo) DeleteRecording(r Recording) error {
 
 	body := map[string]Library{"data": {r}}
 	resp, err := a.post(LibraryRecycleUri, "", body, nil)
-	if err != nil {
-		return nil, errors.WithMessage(err, "failed to delete recording")
-	}
-
-	var status Error
-	if err := resp.Decode(&status); err != nil {
-		return nil, err
-	}
-
-	return &status, nil
+	return checkRequest(resp, err, "failed to delete recording")
 }
 
 /*
@@ -99,18 +85,9 @@ func (a *Arlo) DeleteRecording(r Recording) (*Error, error) {
 
  NOTE: {"data": [{"createdDate": r.CreatedDate, "utcCreatedDate": r.UtcCreatedDate, "deviceId": r.DeviceId}]} is all that's really required.
 */
-func (a *Arlo) BatchDeleteRecordings(l Library) (*Error, error) {
+func (a *Arlo) BatchDeleteRecordings(l Library) error {
 
 	body := map[string]Library{"data": l}
 	resp, err := a.post(LibraryRecycleUri, "", body, nil)
-	if err != nil {
-		return nil, errors.WithMessage(err, "failed to delete recordings")
-	}
-
-	var status Error
-	if err := resp.Decode(&status); err != nil {
-		return nil, err
-	}
-
-	return &status, nil
+	return checkRequest(resp, err, "failed to delete recordings")
 }

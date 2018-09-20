@@ -15,19 +15,28 @@ import (
 	"github.com/pkg/errors"
 )
 
-func checkRequest(resp request.Response, err error, msg string) error {
+func checkHttpRequest(resp *request.Response, err error, msg string) error {
+	if resp.StatusCode != 200 {
+		return errors.WithMessage(errors.New(fmt.Sprintf("http request failed: %s (%d)", resp.Status, resp.StatusCode)), msg)
+	}
+
 	if err != nil {
 		return errors.WithMessage(err, msg)
 	}
+
+	return nil
+}
+
+func checkRequest(resp *request.Response, err error, msg string) error {
 	defer resp.Body.Close()
 
-	var status Error
-	if err := resp.Decode(&status); err != nil {
+	if err := checkHttpRequest(resp, err, msg); err != nil {
 		return err
 	}
 
-	if resp.StatusCode != 200 {
-		return errors.WithMessage(errors.New(fmt.Sprintf("http request failed: %s (%d)", resp.Status, resp.StatusCode)), msg)
+	var status Status
+	if err := resp.Decode(&status); err != nil {
+		return err
 	}
 
 	if status.Success == false {

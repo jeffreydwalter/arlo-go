@@ -15,7 +15,8 @@ type Arlo struct {
 	Cameras      Cameras
 }
 
-func newArlo(user string, pass string) *Arlo {
+func newArlo(user string, pass string) (arlo *Arlo) {
+
 	c, _ := request.NewClient(BaseUrl)
 
 	// Add important headers.
@@ -31,14 +32,15 @@ func newArlo(user string, pass string) *Arlo {
 	}
 }
 
-func Login(user string, pass string) (*Arlo, error) {
-	a := newArlo(user, pass)
+func Login(user string, pass string) (arlo *Arlo, err error) {
+	arlo = newArlo(user, pass)
 
-	body := map[string]string{"email": a.user, "password": a.pass}
-	resp, err := a.post(LoginUri, "", body, nil)
-	if err != nil {
-		return nil, errors.WithMessage(err, "login request failed")
+	body := map[string]string{"email": arlo.user, "password": arlo.pass}
+	resp, err := arlo.post(LoginUri, "", body, nil)
+	if err := checkHttpRequest(resp, err, "login request failed"); err != nil {
+		return nil, err
 	}
+	defer resp.Body.Close()
 
 	var loginResponse LoginResponse
 	if err := resp.Decode(&loginResponse); err != nil {
@@ -47,33 +49,33 @@ func Login(user string, pass string) (*Arlo, error) {
 
 	if loginResponse.Success {
 		// Cache the auth token.
-		a.client.BaseHttpHeader.Add("Authorization", loginResponse.Data.Token)
+		arlo.client.BaseHttpHeader.Add("Authorization", loginResponse.Data.Token)
 
 		// Save the account info with the arlo struct.
-		a.Account = loginResponse.Data
+		arlo.Account = loginResponse.Data
 
 		// Get the devices, which also caches them on the arlo object.
-		if _, err := a.GetDevices(); err != nil {
+		if _, err := arlo.GetDevices(); err != nil {
 			return nil, errors.WithMessage(err, "failed to login")
 		}
 	} else {
 		return nil, errors.New("failed to login")
 	}
 
-	return a, nil
+	return arlo, nil
 }
 
 func (a *Arlo) Logout() error {
 	resp, err := a.put(LogoutUri, "", nil, nil)
-	return checkRequest(*resp, err, "failed to logout")
+	return checkRequest(resp, err, "failed to logout")
 }
 
 // GetDevices returns an array of all devices.
 // When you call Login, this method is called and all devices are cached in the arlo object.
-func (a *Arlo) GetDevices() (Devices, error) {
+func (a *Arlo) GetDevices() (devices Devices, err error) {
 	resp, err := a.get(DevicesUri, "", nil)
-	if err != nil {
-		return nil, errors.WithMessage(err, "failed to get devices")
+	if err := checkHttpRequest(resp, err, "failed to get devices"); err != nil {
+		return nil, err
 	}
 	defer resp.Body.Close()
 
@@ -82,12 +84,12 @@ func (a *Arlo) GetDevices() (Devices, error) {
 		return nil, err
 	}
 
-	if len(deviceResponse.Data) == 0 {
-		return nil, errors.New("no devices found")
-	}
-
 	if !deviceResponse.Success {
 		return nil, errors.New("failed to get devices")
+	}
+
+	if len(deviceResponse.Data) == 0 {
+		return nil, errors.New("no devices found")
 	}
 
 	for i := range deviceResponse.Data {
@@ -118,20 +120,20 @@ func (a *Arlo) GetDevices() (Devices, error) {
 // UpdateDisplayOrder sets the display order according to the order defined in the DeviceOrder given.
 func (a *Arlo) UpdateDisplayOrder(d DeviceOrder) error {
 	resp, err := a.post(DeviceDisplayOrderUri, "", d, nil)
-	return checkRequest(*resp, err, "failed to display order")
+	return checkRequest(resp, err, "failed to display order")
 }
 
 // UpdateProfile takes a first and last name, and updates the user profile with that information.
 func (a *Arlo) UpdateProfile(firstName, lastName string) error {
 	body := map[string]string{"firstName": firstName, "lastName": lastName}
 	resp, err := a.put(UserProfileUri, "", body, nil)
-	return checkRequest(*resp, err, "failed to update profile")
+	return checkRequest(resp, err, "failed to update profile")
 }
 
 func (a *Arlo) UpdatePassword(pass string) error {
 	body := map[string]string{"currentPassword": a.pass, "newPassword": pass}
 	resp, err := a.post(UserChangePasswordUri, "", body, nil)
-	if err := checkRequest(*resp, err, "failed to update password"); err != nil {
+	if err := checkRequest(resp, err, "failed to update password"); err != nil {
 		return err
 	}
 
@@ -142,5 +144,5 @@ func (a *Arlo) UpdatePassword(pass string) error {
 
 func (a *Arlo) UpdateFriends(f Friend) error {
 	resp, err := a.put(UserFriendsUri, "", f, nil)
-	return checkRequest(*resp, err, "failed to update friends")
+	return checkRequest(resp, err, "failed to update friends")
 }

@@ -28,50 +28,72 @@ type FullName struct {
 
 // Account is the account data.
 type Account struct {
-	UserId        string  `json:"userId"`
-	Email         string  `json:"email"`
-	Token         string  `json:"token"`
-	PaymentId     string  `json:"paymentId"`
-	Authenticated uint32  `json:"authenticated"`
-	AccountStatus string  `json:"accountStatus"`
-	SerialNumber  string  `json:"serialNumber"`
-	CountryCode   string  `json:"countryCode"`
-	TocUpdate     bool    `json:"tocUpdate"`
-	PolicyUpdate  bool    `json:"policyUpdate"`
-	ValidEmail    bool    `json:"validEmail"`
-	Arlo          bool    `json:"arlo"`
-	DateCreated   float64 `json:"dateCreated"`
+	UserId        string `json:"userId"`
+	Email         string `json:"email"`
+	Token         string `json:"token"`
+	PaymentId     string `json:"paymentId"`
+	Authenticated uint32 `json:"authenticated"`
+	AccountStatus string `json:"accountStatus"`
+	SerialNumber  string `json:"serialNumber"`
+	CountryCode   string `json:"countryCode"`
+	TocUpdate     bool   `json:"tocUpdate"`
+	PolicyUpdate  bool   `json:"policyUpdate"`
+	ValidEmail    bool   `json:"validEmail"`
+	Arlo          bool   `json:"arlo"`
+	DateCreated   int64  `json:"dateCreated"`
 }
 
+// Friend is the account data for non-primary account holders designated as friends.
 type Friend struct {
 	FirstName    string      `json:"firstName"`
 	LastName     string      `json:"lastName"`
 	Devices      DeviceOrder `json:"devices"`
-	LastModified float64     `json:"lastModified"`
+	LastModified int64       `json:"lastModified"`
 	AdminUser    bool        `json:"adminUser"`
 	Email        string      `json:"email"`
 	Id           string      `json:"id"`
 }
 
-// Owner is part of the Device data.
+// Connectivity is part of the Device data.
 type Connectivity struct {
-	ActiveNetwork  string `json:"activeNetwork"`
-	APN            string `json:"apn"`
-	CarrierFw      string `json:"carrierFw"`
+	ActiveNetwork  string `json:"activeNetwork,omitempty"`
+	APN            string `json:"apn,omitempty"`
+	CarrierFw      string `json:"carrierFw,omitempty"`
 	Connected      bool   `json:"connected"`
-	FWVersion      string `json:"fwVersion"`
-	ICCID          string `json:"iccid"`
-	IMEI           string `json:"imei"`
-	MEPStatus      string `json:"mepStatus"`
-	MSISDN         string `json:"msisdn"`
-	NetworkMode    string `json:"networkMode"`
-	NetworkName    string `json:"networkName"`
-	RFBand         int    `json:"rfBand"`
+	FWVersion      string `json:"fwVersion,omitempty"`
+	ICCID          string `json:"iccid,omitempty"`
+	IMEI           string `json:"imei,omitempty"`
+	MEPStatus      string `json:"mepStatus,omitempty"`
+	MSISDN         string `json:"msisdn,omitempty"`
+	NetworkMode    string `json:"networkMode,omitempty"`
+	NetworkName    string `json:"networkName,omitempty"`
+	RFBand         int    `json:"rfBand,omitempty"`
 	Roaming        bool   `json:"roaming"`
 	RoamingAllowed bool   `json:"roamingAllowed"`
-	SignalStrength string `json:"signalStrength"`
-	Type           string `json:"type"`
-	WWANIPAddr     string `json:"wwanIpAddr"`
+	SignalStrength string `json:"signalStrength,omitempty"`
+	Type           string `json:"type,omitempty"`
+	WWANIPAddr     string `json:"wwanIpAddr,omitempty"`
+}
+
+type BaseStationMetadata struct {
+	InterfaceVersion         int             `json:"interfaceVersion"`
+	ApiVersion               int             `json:"apiVersion"`
+	State                    string          `json:"state"`
+	SwVersion                string          `json:"swVersion"`
+	HwVersion                string          `json:"hwVersion"`
+	ModelId                  string          `json:"modelId"`
+	Capabilities             []string        `json:"capabilities"`
+	McsEnabled               bool            `json:"mcsEnabled"`
+	AutoUpdateEnabled        bool            `json:"autoUpdateEnabled"`
+	TimeZone                 string          `json:"timeZone"`
+	OlsonTimeZone            string          `json:"olsonTimeZone"`
+	UploadBandwidthSaturated bool            `json:"uploadBandwidthSaturated"`
+	AntiFlicker              map[string]int  `json:"antiFlicker"`
+	LowBatteryAlert          map[string]bool `json:"lowBatteryAlert"`
+	LowSignalAlert           map[string]bool `json:"lowSignalAlert"`
+	Claimed                  bool            `json:"claimed"`
+	TimeSyncState            string          `json:"timeSyncState"`
+	Connectivity             Connectivity    `json:"connectivity"`
 }
 
 // Owner is the owner of a Device data.
@@ -97,8 +119,118 @@ type StreamUrl struct {
 	Url string `json:"url"`
 }
 
-// Payload represents the message that will be sent to the arlo servers via the Notify API.
-type Payload struct {
+type BaseDetectionProperties struct {
+	Armed       bool     `json:"armed"`
+	Sensitivity int      `json:"sensitivity"`
+	Zones       []string `json:"zones,omitempty"`
+}
+
+// MotionDetectionProperties is the Properties struct for the EventStreamPayload type.
+type MotionDetectionProperties struct {
+	BaseDetectionProperties `json:"motionDetection"`
+}
+
+// AudioDetectionProperties is the Properties struct for the EventStreamPayload type.
+type AudioDetectionProperties struct {
+	BaseDetectionProperties `json:"audioDetection"`
+}
+
+type EmailNotification struct {
+	Enabled          bool     `json:"enabled"`
+	EmailList        []string `json:"emailList"`
+	PushNotification bool     `json:"pushNotification"`
+}
+
+type PlayTrackProperties struct {
+	TrackId  string `json:"trackId"`
+	Position int    `json:"position"`
+}
+
+type BaseLoopbackModeProperties struct {
+	LoopbackMode string `json:"loopbackMode"`
+}
+
+type LoopbackModeProperties struct {
+	Config BaseLoopbackModeProperties `json:"config"`
+}
+
+type BaseSleepTimerProperties struct {
+	SleepTime    int64 `json:"sleepTime"`
+	SleepTimeRel int   `json:"sleepTimeRel"`
+}
+
+type SleepTimerProperties struct {
+	Config BaseSleepTimerProperties `json:"config"`
+}
+type BaseEventActionProperties struct {
+	ActionType        string `json:"actionType"`
+	StopType          string `json:"stopType"`
+	Timeout           int    `json:"timeout"`
+	EmailNotification `json:"emailNotification"`
+}
+
+type EventActionProperties struct {
+	BaseEventActionProperties `json:"eventAction"`
+}
+
+type BaseShuffleProperties struct {
+	ShuffleActive bool `json:"shuffleActive"`
+}
+
+type ShuffleProperties struct {
+	Config BaseShuffleProperties `json:"config"`
+}
+
+type VolumeProperties struct {
+	Mute   bool `json:"mute"`
+	Volume int  `json:"volume,omitempty"`
+}
+
+type SpeakerProperties struct {
+	Speaker VolumeProperties `json:"speaker"`
+}
+
+type NightLightRGBProperties struct {
+	Red   int `json:"red"`
+	Green int `json:"green"`
+	Blue  int `json:"blue"`
+}
+
+type BaseNightLightProperties struct {
+	Brightness   int                     `json:"brightness,omitempty"`
+	Enabled      bool                    `json:"enabled"`
+	Mode         string                  `json:"mode,omitempty"`
+	RGB          NightLightRGBProperties `json:"mode,omitempty"`
+	SleepTime    int64                   `json:"sleepTime,omitempty"`
+	SleepTimeRel int                     `json:"sleepTimeRel,omitempty"`
+}
+
+type NightLightProperties struct {
+	NightLight BaseNightLightProperties `json:"nightLight"`
+}
+
+type SirenProperties struct {
+	SirenState string `json:"sirenState"`
+	Duration   int    `json:"duration"`
+	Volume     int    `json:"volume"`
+	Pattern    string `json:"pattern"`
+}
+
+type BasestationModeProperties struct {
+	Active string `json:"active"`
+}
+
+type BasestationScheduleProperties struct {
+	Active bool `json:"active"`
+}
+
+type CameraProperties struct {
+	PrivacyActive bool `json:"privacyActive"`
+	Brightness    int  `json:"brightness,omitempty"`
+}
+
+// EventStreamPayload is the message that will be sent to the arlo servers via the /notify API.
+type EventStreamPayload struct {
 	Action          string      `json:"action,omitempty"`
 	Resource        string      `json:"resource,omitempty"`
 	PublishResponse bool        `json:"publishResponse"`
@@ -108,14 +240,16 @@ type Payload struct {
 	To              string      `json:"to"`
 }
 
+// Data is part of the Status message fragment returned by most calls to the Arlo API.
+// Data is only populated when Success is false.
 type Data struct {
 	Message string `json:"message,omitempty"`
 	Reason  string `json:"reason,omitempty"`
 	Error   string `json:"error,omitempty"`
 }
 
-// map[data:map[message:The device does not exist. reason:No such device. error:2217] success:false]
-type Error struct {
+// Status is the message fragment returned from most http calls to the Arlo API.
+type Status struct {
 	Data    `json:"Data,omitempty"`
 	Success bool `json:"success"`
 }

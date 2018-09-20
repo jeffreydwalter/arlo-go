@@ -3,42 +3,37 @@ package arlo
 // LoginResponse is an intermediate struct used when parsing data from the Login() call.
 type LoginResponse struct {
 	Data Account
-	Error
+	Status
 }
 
 // DeviceResponse is an intermediate struct used when parsing data from the GetDevices() call.
 type DeviceResponse struct {
 	Data Devices
-	Error
+	Status
 }
 
 // LibraryMetaDataResponse is an intermediate struct used when parsing data from the GetLibraryMetaData() call.
 type LibraryMetaDataResponse struct {
 	Data LibraryMetaData
-	Error
+	Status
 }
 
 type LibraryResponse struct {
 	Data Library
-	Error
+	Status
 }
 
 type StreamResponse struct {
 	Data StreamUrl
-	Error
+	Status
 }
 
 type RecordingResponse struct {
 	Data StreamUrl
-	Error
+	Status
 }
 
 type EventStreamResponse struct {
-	Action     string      `json:"action,omitempty"`
-	Resource   string      `json:"resource,omitempty"`
-	Properties interface{} `json:"properties,omitempty"`
-	TransId    string      `json:"transId"`
-	From       string      `json:"from"`
-	To         string      `json:"to"`
-	Status     string      `json:"status"`
+	EventStreamPayload
+	Status string `json:"status,omitempty"`
 }
