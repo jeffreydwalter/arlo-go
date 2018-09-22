@@ -1,10 +1,10 @@
 # arlo-golang
-![](logo.png)	
+![](gopher-arlo.png)	
 > Go package for interacting with Netgear's Arlo camera system.
 
 ---
 ### Now in Go!
-I love Go. That is why I decided to write this library! I am the creator of the first [arlo](https://github.com/jeffreydwalter/arlo-golang) library written in Python.
+I love Go. That is why I decided to write this library! I am the creator of the first [arlo](https://github.com/jeffreydwalter/arlo) library written in Python.
 
 My goal is to bring parity to the Python version asap. If you know what you're doing in Go, I would appreciate any feedback on the general structure of the library, bugs found, contributions, etc.
 
