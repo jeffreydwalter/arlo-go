@@ -17,7 +17,6 @@
 package arlo
 
 import (
-	"fmt"
 	"time"
 
 	"github.com/pkg/errors"
@@ -122,8 +121,6 @@ func (a *Arlo) DeleteRecording(r *Recording) error {
 func (a *Arlo) BatchDeleteRecordings(l *Library) error {
 
 	body := map[string]Library{"data": *l}
-	fmt.Printf("%+v\n", body)
-	return nil
-	//resp, err := a.post(LibraryRecycleUri, "", body, nil)
-	//return checkRequest(resp, err, "failed to delete recordings")
+	resp, err := a.post(LibraryRecycleUri, "", body, nil)
+	return checkRequest(resp, err, "failed to delete recordings")
 }

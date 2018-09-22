@@ -16,5 +16,8 @@
 # Project-local files
 *.idea
 
+# go dep lock file
+Gopkg.lock
+
 # Go vendor libraries 
 vendor/**/
