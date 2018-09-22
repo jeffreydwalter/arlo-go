@@ -1,6 +1,8 @@
 package arlo
 
 import (
+	"sync"
+
 	"github.com/jeffreydwalter/arlo-golang/internal/request"
 
 	"github.com/pkg/errors"
@@ -13,6 +15,7 @@ type Arlo struct {
 	Account      Account
 	Basestations Basestations
 	Cameras      Cameras
+	rwmutex      sync.RWMutex
 }
 
 func newArlo(user string, pass string) (arlo *Arlo) {
@@ -96,18 +99,20 @@ func (a *Arlo) GetDevices() (devices Devices, err error) {
 		deviceResponse.Data[i].arlo = a
 	}
 
-	// Unsubscribe all of the basestations from the EventStream.
+	// disconnect all of the basestations from the EventStream.
 	for i := range a.Basestations {
-		if err := a.Basestations[i].Unsubscribe(); err != nil {
+		if err := a.Basestations[i].Disconnect(); err != nil {
 			return nil, errors.WithMessage(err, "failed to get devices")
 		}
 	}
 
+	a.rwmutex.Lock()
 	// Cache the devices as their respective types.
 	a.Cameras = deviceResponse.Data.GetCameras()
 	a.Basestations = deviceResponse.Data.GetBasestations()
+	a.rwmutex.Unlock()
 
-	// Subscribe each basestation to the EventStream.
+	// subscribe each basestation to the EventStream.
 	for i := range a.Basestations {
 		if err := a.Basestations[i].Subscribe(); err != nil {
 			return nil, errors.WithMessage(err, "failed to get devices")

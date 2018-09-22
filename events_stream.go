@@ -17,33 +17,48 @@ var (
 	FAILED_TO_SUBSCRIBE   = errors.New("failed to subscribe to seeclient")
 )
 
-type EventStream struct {
-	SSEClient     *sse.Client
-	Subscriptions map[string]chan *EventStreamResponse
-	Events        chan *sse.Event
-	Error         chan error
-	Close         chan interface{}
-	Connected     bool
-	Verbose       bool
+type subscriber chan *EventStreamResponse
 
-	sync.Mutex
+type subscribers map[string]subscriber
+
+type subscriptions struct {
+	subscribers
+	rwmutex sync.RWMutex
 }
 
-func NewEventStream(url string, client *http.Client) *EventStream {
+type eventStream struct {
+	SSEClient    *sse.Client
+	Events       chan *sse.Event
+	Error        chan error
+	Verbose      bool
+	Disconnected chan interface{}
+	once         *sync.Once
+
+	subscriptions
+}
+
+func newEventStream(url string, client *http.Client) *eventStream {
 
 	SSEClient := sse.NewClient(url)
 	SSEClient.Connection = client
 
-	return &EventStream{
+	return &eventStream{
 		SSEClient:     SSEClient,
 		Events:        make(chan *sse.Event),
-		Subscriptions: make(map[string]chan *EventStreamResponse),
+		subscriptions: subscriptions{make(map[string]subscriber), sync.RWMutex{}},
 		Error:         make(chan error),
-		Close:         make(chan interface{}),
+		Disconnected:  make(chan interface{}),
+		once:          new(sync.Once),
 	}
 }
 
-func (e *EventStream) Listen() (connected chan bool) {
+func (e *eventStream) disconnect() {
+	e.once.Do(func() {
+		close(e.Disconnected)
+	})
+}
+
+func (e *eventStream) listen() (connected chan bool) {
 
 	connected = make(chan bool)
 
@@ -74,16 +89,17 @@ func (e *EventStream) Listen() (connected chan bool) {
 					if notifyResponse.Status == "connected" {
 						connected <- true
 					} else if notifyResponse.Status == "disconnected" {
-						connected <- false
+						e.disconnect()
 					} else {
-						if subscriber, ok := e.Subscriptions[notifyResponse.TransId]; ok {
-							e.Lock()
+						e.subscriptions.rwmutex.RLock()
+						subscriber, ok := e.subscribers[notifyResponse.TransId]
+						e.subscriptions.rwmutex.RUnlock()
+						if ok {
 							subscriber <- notifyResponse
-							e.Unlock()
 						}
 					}
 				}
-			case <-e.Close:
+			case <-e.Disconnected:
 				connected <- false
 				return
 			}
@@ -91,4 +107,20 @@ func (e *EventStream) Listen() (connected chan bool) {
 	}()
 
 	return connected
+}
+
+func (s *subscriptions) unsubscribe(transId string) {
+	s.rwmutex.Lock()
+	defer s.rwmutex.Unlock()
+	if _, ok := s.subscribers[transId]; ok {
+		close(s.subscribers[transId])
+		delete(s.subscribers, transId)
+	}
+
+}
+
+func (s *subscriptions) subscribe(transId string, subscriber subscriber) {
+	s.rwmutex.Lock()
+	s.subscribers[transId] = subscriber
+	s.rwmutex.Unlock()
 }

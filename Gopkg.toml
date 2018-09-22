@@ -26,8 +26,8 @@
   name = "github.com/mitchellh/mapstructure"
 
 [[constraint]]
+  branch = "master"
   name = "github.com/pkg/errors"
-  version = "0.8.0"
 
 [[constraint]]
   branch = "master"

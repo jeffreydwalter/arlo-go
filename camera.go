@@ -282,6 +282,14 @@ func (c *Camera) DisableAudioAlerts(sensitivity int) (response *EventStreamRespo
 	return b.makeEventStreamRequest(payload, msg)
 }
 
+// PushToTalk starts a push-to-talk session.
+// FIXME: This feature requires more API calls to make it actually work, and I haven't figure out how to fully implement it.
+// It appears that the audio stream is Real-Time Transport Protocol (RTP), which requires a player (ffmpeg?) to consume the stream.
+func (c *Camera) PushToTalk() error {
+	resp, err := c.arlo.get(fmt.Sprintf(PushToTalkUri, c.UniqueId), c.XCloudId, nil)
+	return checkRequest(resp, err, "failed to enable push to talk")
+}
+
 // action: disabled OR recordSnapshot OR recordVideo
 func (c *Camera) SetAlertNotificationMethods(action string, email, push bool) (response *EventStreamResponse, err error) {
 	payload := EventStreamPayload{

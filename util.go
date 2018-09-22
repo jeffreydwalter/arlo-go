@@ -60,7 +60,9 @@ func genTransId() string {
 
 func (a *Arlo) get(uri, xCloudId string, header http.Header) (*request.Response, error) {
 	if len(xCloudId) > 0 {
+		a.rwmutex.Lock()
 		a.client.BaseHttpHeader.Set("xcloudId", xCloudId)
+		a.rwmutex.Unlock()
 	}
 
 	return a.client.Get(uri, header)
@@ -68,7 +70,9 @@ func (a *Arlo) get(uri, xCloudId string, header http.Header) (*request.Response,
 
 func (a *Arlo) put(uri, xCloudId string, body interface{}, header http.Header) (*request.Response, error) {
 	if len(xCloudId) > 0 {
+		a.rwmutex.Lock()
 		a.client.BaseHttpHeader.Set("xcloudId", xCloudId)
+		a.rwmutex.Unlock()
 	}
 
 	return a.client.Put(uri, body, header)
@@ -76,7 +80,9 @@ func (a *Arlo) put(uri, xCloudId string, body interface{}, header http.Header) (
 
 func (a *Arlo) post(uri, xCloudId string, body interface{}, header http.Header) (*request.Response, error) {
 	if len(xCloudId) > 0 {
+		a.rwmutex.Lock()
 		a.client.BaseHttpHeader.Set("xcloudId", xCloudId)
+		a.rwmutex.Unlock()
 	}
 
 	return a.client.Post(uri, body, header)

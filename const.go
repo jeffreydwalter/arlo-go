@@ -1,8 +1,6 @@
 package arlo
 
 const (
-	TransIdPrefix = "web"
-
 	BaseUrl               = "https://arlo.netgear.com/hmsweb"
 	LoginUri              = "/login/v2"
 	LogoutUri             = "/logout"
@@ -13,6 +11,7 @@ const (
 	ServiceLevelUri       = "/users/serviceLevel"
 	OffersUri             = "/users/payment/offers"
 	UserProfileUri        = "/users/profile"
+	PushToTalkUri         = "/users/devices/%s/pushtotalk"
 	UserChangePasswordUri = "/users/changePassword"
 	UserSessionUri        = "/users/session"
 	UserFriendsUri        = "/users/friends"
@@ -32,4 +31,5 @@ const (
 	DeviceTypeBasestation = "basestation"
 	DeviceTypeCamera      = "camera"
 	DeviceTypeArloQ       = "arloq"
+	TransIdPrefix         = "web"
 )

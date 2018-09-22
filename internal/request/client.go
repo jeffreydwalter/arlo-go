@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"io"
-	"log"
 	"net/http"
 	"net/http/cookiejar"
 	"net/url"
@@ -81,7 +80,7 @@ func (c *Client) newRequest(method string, uri string, body interface{}, header 
 			return nil, errors.Wrap(err, "failed to create request object")
 		}
 	}
-	log.Printf("\n\nBODY (%s): %s\n\n", uri, buf)
+	// log.Printf("\n\nBODY (%s): %s\n\n", uri, buf)
 
 	u := c.BaseURL.String() + uri
 	req, err := http.NewRequest(method, u, buf)

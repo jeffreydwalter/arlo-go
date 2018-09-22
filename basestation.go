@@ -8,48 +8,17 @@ import (
 )
 
 const eventStreamTimeout = 10 * time.Second
+const pingTime = 30 * time.Second
 
 // A Basestation is a Device that's not type "camera" (basestation, arloq, arloqs, etc.).
 // This type is here just for semantics. Some methods explicitly require a device of a certain type.
 type Basestation struct {
 	Device
-	eventStream *EventStream
+	eventStream *eventStream
 }
 
 // Basestations is an array of Basestation objects.
 type Basestations []Basestation
-
-func (b *Basestation) makeEventStreamRequest(payload EventStreamPayload, msg string) (response *EventStreamResponse, err error) {
-	transId := genTransId()
-	payload.TransId = transId
-
-	if err := b.IsConnected(); err != nil {
-		return nil, errors.WithMessage(err, msg)
-	}
-
-	b.eventStream.Subscriptions[transId] = make(chan *EventStreamResponse)
-	defer close(b.eventStream.Subscriptions[transId])
-
-	if err := b.NotifyEventStream(payload, msg); err != nil {
-		return nil, err
-	}
-
-	timer := time.NewTimer(eventStreamTimeout)
-	defer timer.Stop()
-
-	select {
-	case <-timer.C:
-		err = fmt.Errorf("event stream response timed out after %.0f second", eventStreamTimeout.Seconds())
-		return nil, errors.WithMessage(err, msg)
-	case response := <-b.eventStream.Subscriptions[transId]:
-		return response, nil
-	case err = <-b.eventStream.Error:
-		return nil, errors.Wrap(err, msg)
-	case <-b.eventStream.Close:
-		err = errors.New("event stream was closed before response was read")
-		return nil, errors.WithMessage(err, msg)
-	}
-}
 
 // Find returns a basestation with the device id passed in.
 func (bs *Basestations) Find(deviceId string) *Basestation {
@@ -62,30 +31,75 @@ func (bs *Basestations) Find(deviceId string) *Basestation {
 	return nil
 }
 
-func (b *Basestation) IsConnected() error {
-	if !b.eventStream.Connected {
-		return errors.New("basestation not connected to event stream")
+// makeEventStreamRequest is a helper function sets up a response channel, sends a message to the event stream, and blocks waiting for the response.
+func (b *Basestation) makeEventStreamRequest(payload EventStreamPayload, msg string) (response *EventStreamResponse, err error) {
+	transId := genTransId()
+	payload.TransId = transId
+
+	if err := b.IsConnected(); err != nil {
+		return nil, errors.WithMessage(err, msg)
 	}
-	return nil
+
+	subscriber := make(subscriber)
+
+	// Add the response channel to the event stream queue so the response can be written to it.
+	b.eventStream.subscribe(transId, subscriber)
+	// Make sure we close and remove the response channel before returning.
+	defer b.eventStream.unsubscribe(transId)
+
+	// Send the payload to the event stream.
+	if err := b.NotifyEventStream(payload, msg); err != nil {
+		return nil, err
+	}
+
+	timer := time.NewTimer(eventStreamTimeout)
+	defer timer.Stop()
+
+	// Wait for the response to come back from the event stream on the response channel.
+	select {
+	// If we get a response, return it to the caller.
+	case response := <-subscriber:
+		return response, nil
+	case err = <-b.eventStream.Error:
+		return nil, errors.Wrap(err, msg)
+	// If the event stream is closed, return an error about it.
+	case <-b.eventStream.Disconnected:
+		err = errors.New("event stream was closed before response was read")
+		return nil, errors.WithMessage(err, msg)
+	// If we timeout, return an error about it.
+	case <-timer.C:
+		err = fmt.Errorf("event stream response timed out after %.0f second", eventStreamTimeout.Seconds())
+		return nil, errors.WithMessage(err, msg)
+	}
+}
+
+func (b *Basestation) IsConnected() error {
+	// If the event stream is closed, return an error about it.
+	select {
+	case <-b.eventStream.Disconnected:
+		return errors.New("basestation not connected to event stream")
+	default:
+		return nil
+	}
 }
 
 func (b *Basestation) Subscribe() error {
-	b.eventStream = NewEventStream(BaseUrl+fmt.Sprintf(SubscribeUri, b.arlo.Account.Token), b.arlo.client.HttpClient)
-	connected := b.eventStream.Listen()
+	b.eventStream = newEventStream(BaseUrl+fmt.Sprintf(SubscribeUri, b.arlo.Account.Token), b.arlo.client.HttpClient)
 
 forLoop:
 	for {
 		// We blocking here because we can't really do anything with the event stream until we're connected.
 		// Once we have confirmation that we're connected to the event stream, we will "subscribe" to events.
 		select {
-		case b.eventStream.Connected = <-connected:
-			if b.eventStream.Connected {
+		case connected := <-b.eventStream.listen():
+			if connected {
 				break forLoop
 			} else {
 				return errors.New("failed to subscribe to the event stream")
 			}
-		case <-b.eventStream.Close:
-			return errors.New("failed to subscribe to the event stream")
+		case <-b.eventStream.Disconnected:
+			err := errors.New("event stream was closed")
+			return errors.WithMessage(err, "failed to subscribe to the event stream")
 		}
 	}
 
@@ -96,9 +110,9 @@ forLoop:
 	// The Arlo event stream requires a "ping" every 30s.
 	go func() {
 		for {
-			time.Sleep(30 * time.Second)
+			time.Sleep(pingTime)
 			if err := b.Ping(); err != nil {
-				b.Unsubscribe()
+				b.Disconnect()
 				break
 			}
 		}
@@ -107,10 +121,10 @@ forLoop:
 	return nil
 }
 
-func (b *Basestation) Unsubscribe() error {
-	// Close channel to stop EventStream.
+func (b *Basestation) Disconnect() error {
+	// disconnect channel to stop event stream.
 	if b.eventStream != nil {
-		close(b.eventStream.Close)
+		b.eventStream.disconnect()
 	}
 	return nil
 }
