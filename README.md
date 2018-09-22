@@ -75,7 +75,7 @@ func main() {
 	// At this point you're logged into Arlo.
 	
 	now := time.Now()
-	start := now.Add(-7 * oneDay)
+	start := now.Sub(7 * oneDay)
 
 	// Get all of the recordings for a date range.
 	library, err := arlo.GetLibrary(start, now)
