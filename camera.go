@@ -1,3 +1,19 @@
+/*
+ * Copyright (c) 2018 Jeffrey Walter <jeffreydwalter@gmail.com>
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated
+ * documentation files (the "Software"), to deal in the Software without restriction, including without limitation the
+ * rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to
+ * permit persons to whom the Software is furnished to do so, subject to the following conditions:
+ * The above copyright notice and this permission notice shall be included in all copies or substantial portions of the
+ * Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE
+ * WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+ * COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
+ * OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ */
+
 package arlo
 
 import (
@@ -11,7 +27,7 @@ import (
 // This type is here just for semantics. Some methods explicitly require a device of a certain type.
 type Camera Device
 
-// Cameras is an array of Camera objects.
+// Cameras is a slice of Camera objects.
 type Cameras []Camera
 
 // Find returns a camera with the device id passed in.
@@ -101,83 +117,6 @@ func (c *Camera) SetBrightness(brightness int) (response *EventStreamResponse, e
 		return nil, errors.WithMessage(err, msg)
 	}
 	return b.makeEventStreamRequest(payload, msg)
-}
-
-// StartStream returns a json object containing the rtmps url to the requested video stream.
-// You will need the to install a library to handle streaming of this protocol: https://pypi.python.org/pypi/python-librtmp
-//
-// The request to /users/devices/startStream returns:
-// NOTE: { "url":"rtsp://vzwow09-z2-prod.vz.netgear.com:80/vzmodulelive?egressToken=b1b4b675_ac03_4182_9844_043e02a44f71&userAgent=web&cameraId=48B4597VD8FF5_1473010750131" }
-func (c *Camera) StartStream() (response *StreamResponse, err error) {
-	payload := EventStreamPayload{
-		Action:          "set",
-		Resource:        fmt.Sprintf("cameras/%s", c.DeviceId),
-		PublishResponse: true,
-		Properties: map[string]string{
-			"activityState": "startUserStream",
-			"cameraId":      c.DeviceId,
-		},
-		TransId: genTransId(),
-		From:    fmt.Sprintf("%s_%s", c.UserId, TransIdPrefix),
-		To:      c.ParentId,
-	}
-
-	msg := "failed to start stream"
-
-	resp, err := c.arlo.post(DeviceStartStreamUri, c.XCloudId, payload, nil)
-	if err := checkHttpRequest(resp, err, msg); err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-
-	if err := resp.Decode(response); err != nil {
-		return nil, err
-	}
-
-	if !response.Success {
-		return nil, errors.WithMessage(errors.New("status was false"), msg)
-	}
-
-	response.Data.Url = strings.Replace(response.Data.Url, "rtsp://", "rtsps://", 1)
-
-	return response, nil
-}
-
-// TakeSnapshot causes the camera to record a snapshot.
-func (c *Camera) TakeSnapshot() (response *StreamResponse, err error) {
-	msg := "failed to take snapshot"
-
-	response, err = c.StartStream()
-	if err != nil {
-		return nil, errors.WithMessage(err, msg)
-	}
-
-	body := map[string]string{"deviceId": c.DeviceId, "parentId": c.ParentId, "xcloudId": c.XCloudId, "olsonTimeZone": c.Properties.OlsonTimeZone}
-	resp, err := c.arlo.post(DeviceTakeSnapshotUri, c.XCloudId, body, nil)
-	if err := checkRequest(resp, err, "failed to update device name"); err != nil {
-		return nil, errors.WithMessage(err, msg)
-	}
-
-	return response, nil
-}
-
-// StartRecording causes the camera to start recording and returns a url that you must start reading from using ffmpeg
-// or something similar.
-func (c *Camera) StartRecording() (response *StreamResponse, err error) {
-	msg := "failed to start recording"
-
-	response, err = c.StartStream()
-	if err != nil {
-		return nil, errors.WithMessage(err, msg)
-	}
-
-	body := map[string]string{"deviceId": c.DeviceId, "parentId": c.ParentId, "xcloudId": c.XCloudId, "olsonTimeZone": c.Properties.OlsonTimeZone}
-	resp, err := c.arlo.post(DeviceStartRecordUri, c.XCloudId, body, nil)
-	if err := checkRequest(resp, err, "failed to update device name"); err != nil {
-		return nil, errors.WithMessage(err, msg)
-	}
-
-	return response, nil
 }
 
 func (c *Camera) EnableMotionAlerts(sensitivity int, zones []string) (response *EventStreamResponse, err error) {
@@ -320,4 +259,82 @@ func (c *Camera) SetAlertNotificationMethods(action string, email, push bool) (r
 		return nil, errors.WithMessage(err, msg)
 	}
 	return b.makeEventStreamRequest(payload, msg)
+}
+
+// StartStream returns a json object containing the rtmps url to the requested video stream.
+// You will need the to install a library to handle streaming of this protocol: https://pypi.python.org/pypi/python-librtmp
+//
+// The request to /users/devices/startStream returns:
+// NOTE: { "url":"rtsp://vzwow09-z2-prod.vz.netgear.com:80/vzmodulelive?egressToken=b1b4b675_ac03_4182_9844_043e02a44f71&userAgent=web&cameraId=48B4597VD8FF5_1473010750131" }
+func (c *Camera) StartStream() (url string, err error) {
+	payload := EventStreamPayload{
+		Action:          "set",
+		Resource:        fmt.Sprintf("cameras/%s", c.DeviceId),
+		PublishResponse: true,
+		Properties: map[string]string{
+			"activityState": "startUserStream",
+			"cameraId":      c.DeviceId,
+		},
+		TransId: genTransId(),
+		From:    fmt.Sprintf("%s_%s", c.UserId, TransIdPrefix),
+		To:      c.ParentId,
+	}
+
+	msg := "failed to start stream"
+
+	resp, err := c.arlo.post(DeviceStartStreamUri, c.XCloudId, payload, nil)
+	if err != nil {
+		return "", errors.WithMessage(err, msg)
+	}
+	defer resp.Body.Close()
+
+	response := new(StreamResponse)
+	if err := resp.Decode(response); err != nil {
+		return "", err
+	}
+
+	if !response.Success {
+		return "", errors.WithMessage(errors.New("status was false"), msg)
+	}
+
+	response.URL = strings.Replace(response.URL, "rtsp://", "rtsps://", 1)
+
+	return response.URL, nil
+}
+
+// TakeSnapshot causes the camera to record a snapshot.
+func (c *Camera) TakeSnapshot() (url string, err error) {
+	msg := "failed to take snapshot"
+
+	url, err = c.StartStream()
+	if err != nil {
+		return "", errors.WithMessage(err, msg)
+	}
+
+	body := map[string]string{"deviceId": c.DeviceId, "parentId": c.ParentId, "xcloudId": c.XCloudId, "olsonTimeZone": c.Properties.OlsonTimeZone}
+	resp, err := c.arlo.post(DeviceTakeSnapshotUri, c.XCloudId, body, nil)
+	if err := checkRequest(resp, err, "failed to update device name"); err != nil {
+		return "", errors.WithMessage(err, msg)
+	}
+
+	return url, nil
+}
+
+// StartRecording causes the camera to start recording and returns a url that you must start reading from using ffmpeg
+// or something similar.
+func (c *Camera) StartRecording() (url string, err error) {
+	msg := "failed to start recording"
+
+	url, err = c.StartStream()
+	if err != nil {
+		return "", errors.WithMessage(err, msg)
+	}
+
+	body := map[string]string{"deviceId": c.DeviceId, "parentId": c.ParentId, "xcloudId": c.XCloudId, "olsonTimeZone": c.Properties.OlsonTimeZone}
+	resp, err := c.arlo.post(DeviceStartRecordUri, c.XCloudId, body, nil)
+	if err := checkRequest(resp, err, "failed to update device name"); err != nil {
+		return "", errors.WithMessage(err, msg)
+	}
+
+	return url, nil
 }

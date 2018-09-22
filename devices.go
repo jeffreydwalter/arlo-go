@@ -1,3 +1,19 @@
+/*
+ * Copyright (c) 2018 Jeffrey Walter <jeffreydwalter@gmail.com>
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated
+ * documentation files (the "Software"), to deal in the Software without restriction, including without limitation the
+ * rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to
+ * permit persons to whom the Software is furnished to do so, subject to the following conditions:
+ * The above copyright notice and this permission notice shall be included in all copies or substantial portions of the
+ * Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE
+ * WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+ * COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
+ * OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ */
+
 package arlo
 
 // A Device is the device data, this can be a camera, basestation, arloq, etc.
@@ -42,7 +58,7 @@ type Device struct {
 	XCloudId                      string       `json:"xCloudId"`
 }
 
-// Devices is an array of Device objects.
+// Devices is a slice of Device objects.
 type Devices []Device
 
 // A DeviceOrder holds a map of device ids and a numeric index. The numeric index is the device order.
@@ -70,9 +86,9 @@ func (ds *Devices) Find(deviceId string) *Device {
 	return nil
 }
 
-func (ds *Devices) FindCameras(basestationId string) Cameras {
+func (ds Devices) FindCameras(basestationId string) Cameras {
 	cs := new(Cameras)
-	for _, d := range *ds {
+	for _, d := range ds {
 		if d.ParentId == basestationId {
 			*cs = append(*cs, Camera(d))
 		}
@@ -93,11 +109,11 @@ func (d Device) IsCamera() bool {
 // I did this because some device types, like arloq, don't have a basestation.
 // So, when interacting with them you must treat them like a basestation and a camera.
 // Cameras also includes devices of this type, so you can get the same data there or cast.
-func (ds Devices) GetBasestations() Basestations {
-	var basestations Basestations
+func (ds Devices) GetBasestations() *Basestations {
+	basestations := new(Basestations)
 	for _, d := range ds {
 		if d.IsBasestation() || !d.IsCamera() {
-			basestations = append(basestations, Basestation{Device: d})
+			*basestations = append(*basestations, Basestation{Device: d})
 		}
 	}
 	return basestations
@@ -107,11 +123,11 @@ func (ds Devices) GetBasestations() Basestations {
 // I did this because some device types, like arloq, don't have a basestation.
 // So, when interacting with them you must treat them like a basestation and a camera.
 // Basestations also includes devices of this type, so you can get the same data there or cast.
-func (ds Devices) GetCameras() Cameras {
-	var cameras Cameras
+func (ds Devices) GetCameras() *Cameras {
+	cameras := new(Cameras)
 	for _, d := range ds {
 		if d.IsCamera() || !d.IsBasestation() {
-			cameras = append(cameras, Camera(d))
+			*cameras = append(*cameras, Camera(d))
 		}
 	}
 	return cameras

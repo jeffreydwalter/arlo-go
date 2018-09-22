@@ -1,3 +1,19 @@
+/*
+ * Copyright (c) 2018 Jeffrey Walter <jeffreydwalter@gmail.com>
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated
+ * documentation files (the "Software"), to deal in the Software without restriction, including without limitation the
+ * rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to
+ * permit persons to whom the Software is furnished to do so, subject to the following conditions:
+ * The above copyright notice and this permission notice shall be included in all copies or substantial portions of the
+ * Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE
+ * WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+ * COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
+ * OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ */
+
 package arlo
 
 /*
@@ -59,7 +75,7 @@ type Connectivity struct {
 	ActiveNetwork  string `json:"activeNetwork,omitempty"`
 	APN            string `json:"apn,omitempty"`
 	CarrierFw      string `json:"carrierFw,omitempty"`
-	Connected      bool   `json:"connected"`
+	Connected      bool   `json:"connected,omitempty"`
 	FWVersion      string `json:"fwVersion,omitempty"`
 	ICCID          string `json:"iccid,omitempty"`
 	IMEI           string `json:"imei,omitempty"`
@@ -113,10 +129,6 @@ type Properties struct {
 type Favorite struct {
 	NonFavorite uint8 `json:"nonFavorite"`
 	Favorite    uint8 `json:"Favorite"`
-}
-
-type StreamUrl struct {
-	Url string `json:"url"`
 }
 
 type BaseDetectionProperties struct {
@@ -240,8 +252,8 @@ type EventStreamPayload struct {
 	To              string      `json:"to"`
 }
 
-// Data is part of the Status message fragment returned by most calls to the Arlo API.
-// Data is only populated when Success is false.
+// URL is part of the Status message fragment returned by most calls to the Arlo API.
+// URL is only populated when Success is false.
 type Data struct {
 	Message string `json:"message,omitempty"`
 	Reason  string `json:"reason,omitempty"`
@@ -250,6 +262,6 @@ type Data struct {
 
 // Status is the message fragment returned from most http calls to the Arlo API.
 type Status struct {
-	Data    `json:"Data,omitempty"`
+	Data    `json:"URL,omitempty"`
 	Success bool `json:"success"`
 }

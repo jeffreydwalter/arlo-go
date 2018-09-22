@@ -1,6 +1,23 @@
+/*
+ * Copyright (c) 2018 Jeffrey Walter <jeffreydwalter@gmail.com>
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated
+ * documentation files (the "Software"), to deal in the Software without restriction, including without limitation the
+ * rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to
+ * permit persons to whom the Software is furnished to do so, subject to the following conditions:
+ * The above copyright notice and this permission notice shall be included in all copies or substantial portions of the
+ * Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE
+ * WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+ * COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
+ * OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ */
+
 package arlo
 
 import (
+	"net/http"
 	"sync"
 
 	"github.com/jeffreydwalter/arlo-golang/internal/request"
@@ -20,13 +37,14 @@ type Arlo struct {
 
 func newArlo(user string, pass string) (arlo *Arlo) {
 
-	c, _ := request.NewClient(BaseUrl)
-
 	// Add important headers.
-	c.BaseHttpHeader.Add("DNT", "1")
-	c.BaseHttpHeader.Add("schemaVersion", "1")
-	c.BaseHttpHeader.Add("Host", "arlo.netgear.com")
-	c.BaseHttpHeader.Add("Referer", "https://arlo.netgear.com/")
+	baseHeaders := make(http.Header)
+	baseHeaders.Add("DNT", "1")
+	baseHeaders.Add("schemaVersion", "1")
+	baseHeaders.Add("Host", "arlo.netgear.com")
+	baseHeaders.Add("Referer", "https://arlo.netgear.com/")
+
+	c, _ := request.NewClient(BaseUrl, baseHeaders)
 
 	return &Arlo{
 		user:   user,
@@ -40,8 +58,8 @@ func Login(user string, pass string) (arlo *Arlo, err error) {
 
 	body := map[string]string{"email": arlo.user, "password": arlo.pass}
 	resp, err := arlo.post(LoginUri, "", body, nil)
-	if err := checkHttpRequest(resp, err, "login request failed"); err != nil {
-		return nil, err
+	if err != nil {
+		return nil, errors.WithMessage(err, "failed to login")
 	}
 	defer resp.Body.Close()
 
@@ -52,7 +70,7 @@ func Login(user string, pass string) (arlo *Arlo, err error) {
 
 	if loginResponse.Success {
 		// Cache the auth token.
-		arlo.client.BaseHttpHeader.Add("Authorization", loginResponse.Data.Token)
+		arlo.client.AddHeader("Authorization", loginResponse.Data.Token)
 
 		// Save the account info with the arlo struct.
 		arlo.Account = loginResponse.Data
@@ -75,10 +93,10 @@ func (a *Arlo) Logout() error {
 
 // GetDevices returns an array of all devices.
 // When you call Login, this method is called and all devices are cached in the arlo object.
-func (a *Arlo) GetDevices() (devices Devices, err error) {
+func (a *Arlo) GetDevices() (devices *Devices, err error) {
 	resp, err := a.get(DevicesUri, "", nil)
-	if err := checkHttpRequest(resp, err, "failed to get devices"); err != nil {
-		return nil, err
+	if err != nil {
+		return nil, errors.WithMessage(err, "failed to get devices")
 	}
 	defer resp.Body.Close()
 
@@ -95,11 +113,12 @@ func (a *Arlo) GetDevices() (devices Devices, err error) {
 		return nil, errors.New("no devices found")
 	}
 
+	// Cache a pointer to the arlo object with each device.
 	for i := range deviceResponse.Data {
 		deviceResponse.Data[i].arlo = a
 	}
 
-	// disconnect all of the basestations from the EventStream.
+	// Disconnect all of the basestations from the EventStream.
 	for i := range a.Basestations {
 		if err := a.Basestations[i].Disconnect(); err != nil {
 			return nil, errors.WithMessage(err, "failed to get devices")
@@ -108,8 +127,8 @@ func (a *Arlo) GetDevices() (devices Devices, err error) {
 
 	a.rwmutex.Lock()
 	// Cache the devices as their respective types.
-	a.Cameras = deviceResponse.Data.GetCameras()
-	a.Basestations = deviceResponse.Data.GetBasestations()
+	a.Cameras = *deviceResponse.Data.GetCameras()
+	a.Basestations = *deviceResponse.Data.GetBasestations()
 	a.rwmutex.Unlock()
 
 	// subscribe each basestation to the EventStream.
@@ -119,7 +138,7 @@ func (a *Arlo) GetDevices() (devices Devices, err error) {
 		}
 	}
 
-	return deviceResponse.Data, nil
+	return &deviceResponse.Data, nil
 }
 
 // UpdateDisplayOrder sets the display order according to the order defined in the DeviceOrder given.

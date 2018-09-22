@@ -2,12 +2,12 @@
 
 
 [[projects]]
-  digest = "1:7365acd48986e205ccb8652cc746f09c8b7876030d53710ea6ef7d0bd0dcd7ca"
+  branch = "master"
+  digest = "1:4a28080faacdaabfe54a78ba0bfb41468744cbcda6af15748b917ca725d3749c"
   name = "github.com/pkg/errors"
   packages = ["."]
   pruneopts = ""
-  revision = "645ef00459ed84a119197bfb8d8205042c6df63d"
-  version = "v0.8.0"
+  revision = "c059e472caf75dbe73903f6521a20abac245b17f"
 
 [[projects]]
   branch = "master"

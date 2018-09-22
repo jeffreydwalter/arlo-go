@@ -1,10 +1,28 @@
+/*
+ * Copyright (c) 2018 Jeffrey Walter <jeffreydwalter@gmail.com>
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated
+ * documentation files (the "Software"), to deal in the Software without restriction, including without limitation the
+ * rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to
+ * permit persons to whom the Software is furnished to do so, subject to the following conditions:
+ * The above copyright notice and this permission notice shall be included in all copies or substantial portions of the
+ * Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE
+ * WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+ * COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
+ * OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ */
+
 package arlo
 
 import (
 	"fmt"
+	"io"
 	"math"
 	"math/rand"
 	"net/http"
+	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -15,24 +33,11 @@ import (
 	"github.com/pkg/errors"
 )
 
-func checkHttpRequest(resp *request.Response, err error, msg string) error {
-	if resp.StatusCode != 200 {
-		return errors.WithMessage(errors.New(fmt.Sprintf("http request failed: %s (%d)", resp.Status, resp.StatusCode)), msg)
-	}
-
+func checkRequest(resp *request.Response, err error, msg string) error {
 	if err != nil {
 		return errors.WithMessage(err, msg)
 	}
-
-	return nil
-}
-
-func checkRequest(resp *request.Response, err error, msg string) error {
 	defer resp.Body.Close()
-
-	if err := checkHttpRequest(resp, err, msg); err != nil {
-		return err
-	}
 
 	var status Status
 	if err := resp.Decode(&status); err != nil {
@@ -59,31 +64,38 @@ func genTransId() string {
 }
 
 func (a *Arlo) get(uri, xCloudId string, header http.Header) (*request.Response, error) {
-	if len(xCloudId) > 0 {
-		a.rwmutex.Lock()
-		a.client.BaseHttpHeader.Set("xcloudId", xCloudId)
-		a.rwmutex.Unlock()
-	}
-
+	a.client.AddHeader("xcloudId", xCloudId)
 	return a.client.Get(uri, header)
 }
 
 func (a *Arlo) put(uri, xCloudId string, body interface{}, header http.Header) (*request.Response, error) {
-	if len(xCloudId) > 0 {
-		a.rwmutex.Lock()
-		a.client.BaseHttpHeader.Set("xcloudId", xCloudId)
-		a.rwmutex.Unlock()
-	}
-
+	a.client.AddHeader("xcloudId", xCloudId)
 	return a.client.Put(uri, body, header)
 }
 
 func (a *Arlo) post(uri, xCloudId string, body interface{}, header http.Header) (*request.Response, error) {
-	if len(xCloudId) > 0 {
-		a.rwmutex.Lock()
-		a.client.BaseHttpHeader.Set("xcloudId", xCloudId)
-		a.rwmutex.Unlock()
+	a.client.AddHeader("xcloudId", xCloudId)
+	return a.client.Post(uri, body, header)
+}
+
+func (a *Arlo) DownloadFile(url, to string) error {
+	msg := fmt.Sprintf("failed to download file (%s) => (%s)", url, to)
+	resp, err := a.get(url, "", nil)
+	if err != nil {
+		return errors.WithMessage(err, msg)
+	}
+	defer resp.Body.Close()
+
+	f, err := os.Create(to)
+	if err != nil {
+		return errors.WithMessage(err, msg)
 	}
 
-	return a.client.Post(uri, body, header)
+	_, err = io.Copy(f, resp.Body)
+	defer f.Close()
+	if err != nil {
+		return errors.WithMessage(err, msg)
+	}
+
+	return nil
 }
