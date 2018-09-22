@@ -47,20 +47,18 @@ After installing all of the required libraries, you can import and use this libr
 package main
 
 import (
-	"encoding/json"
 	"fmt"
 	"log"
-	"net/http"
 	"time"
 
 	"github.com/jeffreydwalter/arlo-golang"
 )
 
-const oneDay = 24 * time.Hour
-
 const (
-    USERNAME = 'user@example.com'
-    PASSWORD = 'supersecretpassword'
+	USERNAME = "user@example.com"
+	PASSWORD = "supersecretpassword"
+
+	oneDay = 24 * time.Hour
 )
 
 func main() {
@@ -69,33 +67,38 @@ func main() {
 	// Subsequent successful calls to login will update the oAuth token.
 	arlo, err := arlo.Login(USERNAME, PASSWORD)
 	if err != nil {
-	  log.Printf("Failed to login: %s\n", err)
-	  return
+		log.Printf("Failed to login: %s\n", err)
+		return
 	}
 	// At this point you're logged into Arlo.
-	
+
 	now := time.Now()
-	start := now.Sub(7 * oneDay)
+	start := now.Add(-7 * oneDay)
 
 	// Get all of the recordings for a date range.
 	library, err := arlo.GetLibrary(start, now)
 	if err != nil {
-	  log.Println(err)
+		log.Println(err)
 		return
 	}
 
 	for _, recording := range *library {
-		filename := fmt.Sprintf("%s %s.mp4", time.Unix(0, recording.UtcCreatedDate*int64(time.Millisecond)).Format(("2006-01-02 15:04:05")), recording.UniqueId)
+		
+		// The go func() here makes this script download the files concurrently.
+		// If you want to download them serially for some reason, just remove the go func() call.
+		go func() {
+			filename := fmt.Sprintf("%s %s.mp4", time.Unix(0, recording.UtcCreatedDate*int64(time.Millisecond)).Format(("2006-01-02 15:04:05")), recording.UniqueId)
 
-		// The videos produced by Arlo are pretty small, even in their longest, best quality settings,
-		// but you should probably prefer the chunked stream (see below).
+			// The videos produced by Arlo are pretty small, even in their longest, best quality settings,
+			// but you should probably prefer the chunked stream (see below).
 
-		// Download the whole video into memory as a single chunk.
-		if err := arlo.DownloadFile(recording.PresignedContentUrl, fmt.Sprintf("videos/%s", filename)); err != nil {
-			log.Println(err)
-		} else {
-			log.Printf("Downloaded video %s from %s", recording.CreatedDate)
-		}
+			// Download the whole video into memory as a single chunk.
+			if err := arlo.DownloadFile(recording.PresignedContentUrl, fmt.Sprintf("videos/%s", filename)); err != nil {
+				log.Println(err)
+			} else {
+				log.Printf("Downloaded video %s from %s", recording.CreatedDate)
+			}
+		}()
 	}
 
 	// Delete all of the videos you just downloaded from the Arlo library.
