@@ -49,6 +49,7 @@ package main
 import (
 	"fmt"
 	"log"
+	"sync"
 	"time"
 
 	"github.com/jeffreydwalter/arlo-golang"
@@ -57,8 +58,6 @@ import (
 const (
 	USERNAME = "user@example.com"
 	PASSWORD = "supersecretpassword"
-
-	oneDay = 24 * time.Hour
 )
 
 func main() {
@@ -73,7 +72,7 @@ func main() {
 	// At this point you're logged into Arlo.
 
 	now := time.Now()
-	start := now.Add(-7 * oneDay)
+	start := now.Add(-7 * 24 * time.Hour)
 
 	// Get all of the recordings for a date range.
 	library, err := arlo.GetLibrary(start, now)
@@ -82,8 +81,14 @@ func main() {
 		return
 	}
 
+	// We need to wait for all of the recordings to download.
+	var wg sync.WaitGroup
+
 	for _, recording := range *library {
-		
+
+		// Let the wait group know about the go routine that we're about to run.
+		wg.Add(1)
+
 		// The go func() here makes this script download the files concurrently.
 		// If you want to download them serially for some reason, just remove the go func() call.
 		go func() {
@@ -98,8 +103,14 @@ func main() {
 			} else {
 				log.Printf("Downloaded video %s from %s", recording.CreatedDate)
 			}
+
+			// Mark this go routine as done in the wait group.
+			wg.Done()
 		}()
 	}
+
+	// Wait here until all of the go routines are done.
+	wg.Wait()
 
 	// Delete all of the videos you just downloaded from the Arlo library.
 	// Notice that you can pass the "library" object we got back from the GetLibrary() call.
