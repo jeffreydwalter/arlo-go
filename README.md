@@ -94,10 +94,8 @@ func main() {
 		go func() {
 			filename := fmt.Sprintf("%s %s.mp4", time.Unix(0, recording.UtcCreatedDate*int64(time.Millisecond)).Format(("2006-01-02 15:04:05")), recording.UniqueId)
 
-			// The videos produced by Arlo are pretty small, even in their longest, best quality settings,
-			// but you should probably prefer the chunked stream (see below).
-
-			// Download the whole video into memory as a single chunk.
+			// The videos produced by Arlo are pretty small, even in their longest, best quality settings.
+			// DownloadFile() efficiently streams the file from the http.Response.Body directly to a file.
 			if err := arlo.DownloadFile(recording.PresignedContentUrl, fmt.Sprintf("videos/%s", filename)); err != nil {
 				log.Println(err)
 			} else {
