@@ -1,5 +1,5 @@
 # arlo-golang
-![](logo.png)	
+![](gopher-arlo.png)	
 > Go package for interacting with Netgear's Arlo camera system.
 
 ---
