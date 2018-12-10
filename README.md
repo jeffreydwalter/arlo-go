@@ -52,7 +52,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/jeffreydwalter/arlo-golang"
+	"github.com/jeffreydwalter/arlo-go"
 )
 
 const (
