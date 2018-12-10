@@ -102,6 +102,9 @@ func (e *eventStream) listen() (connected chan bool) {
 						break
 					}
 
+					if notifyResponse.Action == "logout" {
+						e.disconnect()
+					}
 					if notifyResponse.Status == "connected" {
 						connected <- true
 					} else if notifyResponse.Status == "disconnected" {
