@@ -111,6 +111,8 @@ func (e *eventStream) listen() (connected chan bool) {
 						connected <- true
 					} else if notifyResponse.Status == "disconnected" {
 						e.disconnect()
+                    } else if notifyResponse.Action == "logout" {
+						e.disconnect()
 					} else {
 						e.subscriptions.rwmutex.RLock()
 						subscriber, ok := e.subscribers[notifyResponse.TransId]
