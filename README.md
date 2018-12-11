@@ -1,4 +1,4 @@
-# arlo-golang
+# arlo-go
 ![](gopher-arlo.png)	
 > Go package for interacting with Netgear's Arlo camera system.
 
@@ -33,7 +33,7 @@ Please read the [Issue Guidelines and Policies](https://github.com/jeffreydwalte
 ## Install
 ```bash
 # Install latest stable package
-$ go get github.com/jeffreydwalter/arlo-golang
+$ go get github.com/jeffreydwalter/arlo-go
 
 # Note: This package uses the `go dep` package for dependency management. If you plan on contributing to this package, you will be required to use [dep](https://github.com/golang/dep). Setting it up is outside the scope of this README, but if you want to contribute and aren't familiar with `dep`, I'm happy to get you.
 ```
@@ -52,7 +52,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/jeffreydwalter/arlo-golang"
+	"github.com/jeffreydwalter/arlo-go"
 )
 
 const (
@@ -122,4 +122,4 @@ func main() {
 }
 ```
 
-** (coming soon) For more code examples check out the [wiki](https://github.com/jeffreydwalter/arlo-golang/wiki)**
+** (coming soon) For more code examples check out the [wiki](https://github.com/jeffreydwalter/arlo-go/wiki)**

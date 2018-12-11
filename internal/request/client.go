@@ -20,11 +20,11 @@ import (
 	"bytes"
 	"encoding/json"
 	"io"
-	"log"
 	"net/http"
 	"net/http/cookiejar"
 	"net/url"
 	"sync"
+	"time"
 
 	"github.com/pkg/errors"
 
@@ -61,7 +61,7 @@ func NewClient(baseURL string, baseHeaders http.Header) (*Client, error) {
 	return &Client{
 		BaseURL:     u,
 		BaseHeaders: &header,
-		HttpClient:  &http.Client{Jar: jar},
+		HttpClient:  &http.Client{Jar: jar, Timeout: 30 * time.Second},
 	}, nil
 }
 
@@ -105,7 +105,7 @@ func (c *Client) newRequest(method string, uri string, body interface{}, header 
 			return nil, errors.Wrap(err, "failed to create request object")
 		}
 	}
-	log.Printf("\n\nBODY (%s): %s\n\n", uri, buf)
+	// log.Printf("\n\nBODY (%s): %s\n\n", uri, buf)
 
 	u := c.BaseURL.String() + uri
 	req, err := http.NewRequest(method, u, buf)
@@ -145,8 +145,8 @@ func (c *Client) newResponse(resp *http.Response) (*Response, error) {
 
 func (c *Client) do(req *Request) (*Response, error) {
 
-	log.Printf("\n\nCOOKIES (%s): %v\n\n", req.URL, c.HttpClient.Jar.Cookies(req.URL))
-	log.Printf("\n\nHEADERS (%s): %v\n\n", req.URL, req.Header)
+	// log.Printf("\n\nCOOKIES (%s): %v\n\n", req.URL, c.HttpClient.Jar.Cookies(req.URL))
+	// log.Printf("\n\nHEADERS (%s): %v\n\n", req.URL, req.Header)
 
 	resp, err := c.HttpClient.Do(&req.Request)
 	if err != nil {

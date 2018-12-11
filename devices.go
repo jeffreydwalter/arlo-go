@@ -135,8 +135,7 @@ func (ds Devices) GetCameras() *Cameras {
 
 // UpdateDeviceName sets the name of the given device to the name argument.
 func (d *Device) UpdateDeviceName(name string) error {
-
 	body := map[string]string{"deviceId": d.DeviceId, "deviceName": name, "parentId": d.ParentId}
-	resp, err := d.arlo.put(DeviceRenameUri, d.XCloudId, body, nil)
+	resp, err := d.arlo.put(RenameDeviceUri, d.XCloudId, body, nil)
 	return checkRequest(resp, err, "failed to update device name")
 }

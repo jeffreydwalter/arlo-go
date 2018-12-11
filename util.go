@@ -22,13 +22,12 @@ import (
 	"math"
 	"math/rand"
 	"net/http"
-	"os"
 	"strconv"
 	"strings"
 	"time"
 
-	"github.com/jeffreydwalter/arlo-golang/internal/request"
-	"github.com/jeffreydwalter/arlo-golang/internal/util"
+	"github.com/jeffreydwalter/arlo-go/internal/request"
+	"github.com/jeffreydwalter/arlo-go/internal/util"
 
 	"github.com/pkg/errors"
 )
@@ -78,6 +77,7 @@ func (a *Arlo) post(uri, xCloudId string, body interface{}, header http.Header) 
 	return a.client.Post(uri, body, header)
 }
 
+/*
 func (a *Arlo) DownloadFile(url, to string) error {
 	msg := fmt.Sprintf("failed to download file (%s) => (%s)", url, to)
 	resp, err := a.get(url, "", nil)
@@ -99,3 +99,40 @@ func (a *Arlo) DownloadFile(url, to string) error {
 
 	return nil
 }
+*/
+
+func (a *Arlo) DownloadFile(url string, w io.Writer) error {
+	msg := fmt.Sprintf("failed to download file (%s)", url)
+	resp, err := a.get(url, "", nil)
+	if err != nil {
+		return errors.WithMessage(err, msg)
+	}
+	defer resp.Body.Close()
+
+	_, err = io.Copy(w, resp.Body)
+	if err != nil {
+		return errors.WithMessage(err, msg)
+	}
+
+	return nil
+}
+
+func UnixMicro(t time.Time) int64 {
+	ns := t.UnixNano()
+	if ns < 0 {
+		return (ns - 999) / 1000
+	}
+	return ns / 1000
+}
+
+func UnixMilli(t time.Time) int64 {
+	ns := t.UnixNano()
+	if ns < 0 {
+		return (ns - 999999) / 1000000
+	}
+	return ns / 1000000
+}
+
+func FromUnixMicro(µs int64) time.Time { return time.Unix(0, 1000*µs) }
+
+func FromUnixMilli(ms int64) time.Time { return time.Unix(0, 1000000*ms) }

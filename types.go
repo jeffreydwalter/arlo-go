@@ -59,6 +59,29 @@ type Account struct {
 	DateCreated   int64  `json:"dateCreated"`
 }
 
+type AppStore struct {
+	Enforce       bool   `json:"enforce"`
+	LatestVersion string `json:"latestVersion"`
+	updateLink    string `json:"updateLink"`
+}
+
+type Session struct {
+	AccountStatus string `json:"accountStatus"`
+
+	AppStore `json:"appStore"`
+	Account
+}
+
+type UserProfile struct {
+	Type           string `json:"_type"`
+	AcceptedPolicy int    `json:"acceptedPolicy"`
+	Country        string `json:"country"`
+	CurrentPolicy  int    `json:"currentPolicy"`
+	FirstName      string `json:"firstName"`
+	LastName       string `json:"lastName"`
+	ValidEmail     bool   `json:"validEmail"`
+}
+
 // Friend is the account data for non-primary account holders designated as friends.
 type Friend struct {
 	FirstName    string      `json:"firstName"`
@@ -252,16 +275,20 @@ type EventStreamPayload struct {
 	To              string      `json:"to"`
 }
 
-// URL is part of the Status message fragment returned by most calls to the Arlo API.
-// URL is only populated when Success is false.
-type Data struct {
-	Message string `json:"message,omitempty"`
-	Reason  string `json:"reason,omitempty"`
-	Error   string `json:"error,omitempty"`
+type PlaylistItem struct {
+	TZ   string `json:"tz"`
+	D    string `json:"d"`
+	URL  string `json:"url"`
+	SURL string `json:"sUrl"`
+	S    string `json:"s"`
+	U    int64  `json:"u"`
 }
 
-// Status is the message fragment returned from most http calls to the Arlo API.
-type Status struct {
-	Data    `json:"URL,omitempty"`
-	Success bool `json:"success"`
+type CvrPlaylist struct {
+	ToDate   string                               `json:"toDate"`
+	Playlist map[string]map[string][]PlaylistItem `json:"playlist"`
+	UserId   string                               `json:"userId"`
+	FromDate string                               `json:"fromDate"`
+	DeviceId string                               `json:"deviceId"`
+	UniqueId string                               `json:"uniqueId"`
 }

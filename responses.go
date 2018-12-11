@@ -16,9 +16,33 @@
 
 package arlo
 
+// URL is part of the Status message fragment returned by most calls to the Arlo API.
+// URL is only populated when Success is false.
+type Data struct {
+	Message string `json:"message,omitempty"`
+	Reason  string `json:"reason,omitempty"`
+	Error   string `json:"error,omitempty"`
+}
+
+// Status is the message fragment returned from most http calls to the Arlo API.
+type Status struct {
+	Data    `json:"URL,omitempty"`
+	Success bool `json:"success"`
+}
+
 // LoginResponse is an intermediate struct used when parsing data from the Login() call.
 type LoginResponse struct {
 	Data Account
+	Status
+}
+
+type SessionResponse struct {
+	Data Session
+	Status
+}
+
+type UserProfileResponse struct {
+	Data UserProfile
 	Status
 }
 
@@ -39,13 +63,22 @@ type LibraryResponse struct {
 	Status
 }
 
-type StreamResponse struct {
+type CvrPlaylistResponse struct {
+	Data CvrPlaylist
+	Status
+}
+
+type Stream struct {
 	URL string `json:"url"`
+}
+
+type StreamResponse struct {
+	Data Stream
 	Status
 }
 
 type RecordingResponse struct {
-	URL string `json:"url"`
+	Data Stream
 	Status
 }
 

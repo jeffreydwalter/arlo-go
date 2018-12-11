@@ -75,10 +75,13 @@ func (e *eventStream) disconnect() {
 }
 
 func (e *eventStream) listen() (connected chan bool) {
-
 	connected = make(chan bool)
 
 	go func() {
+		e.SSEClient.OnDisconnect(func(c *sse.Client) {
+			e.disconnect()
+			// fmt.Printf("\n\n\n\nClIENT DISCONNECTED!!!!!\n\n\n\n")
+		})
 		err := e.SSEClient.SubscribeChanRaw(e.Events)
 		if err != nil {
 			e.Error <- FAILED_TO_SUBSCRIBE
@@ -87,13 +90,14 @@ func (e *eventStream) listen() (connected chan bool) {
 		for {
 			select {
 			case event := <-e.Events:
+				//fmt.Println("Got event message.")
 				/*
-					fmt.Println("Got event message.")
+					fmt.Print(".")
 					fmt.Printf("EVENT: %s\n", event.Event)
-					fmt.Printf("DATA: %s\n", event.URL)
+					fmt.Printf("DATA: %s\n", event.Data)
 				*/
 
-				if event.Data != nil {
+				if event != nil && event.Data != nil {
 					notifyResponse := &EventStreamResponse{}
 					b := bytes.NewBuffer(event.Data)
 					err := json.NewDecoder(b).Decode(notifyResponse)
@@ -102,6 +106,7 @@ func (e *eventStream) listen() (connected chan bool) {
 						break
 					}
 
+					// FIXME: This is a shitty way to handle this. It's potentially leaking a chan.
 					if notifyResponse.Status == "connected" {
 						connected <- true
 					} else if notifyResponse.Status == "disconnected" {

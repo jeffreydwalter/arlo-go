@@ -18,6 +18,7 @@ package arlo
 
 import (
 	"fmt"
+	"net/http"
 	"time"
 
 	"github.com/pkg/errors"
@@ -53,7 +54,9 @@ func (b *Basestation) makeEventStreamRequest(payload EventStreamPayload, msg str
 	payload.TransId = transId
 
 	if err := b.IsConnected(); err != nil {
-		return nil, errors.WithMessage(err, msg)
+		//if err := b.Subscribe(); err != nil {
+		return nil, errors.WithMessage(errors.WithMessage(err, msg), "failed to reconnect to event stream")
+		//}
 	}
 
 	subscriber := make(subscriber)
@@ -100,7 +103,7 @@ func (b *Basestation) IsConnected() error {
 }
 
 func (b *Basestation) Subscribe() error {
-	b.eventStream = newEventStream(BaseUrl+fmt.Sprintf(SubscribeUri, b.arlo.Account.Token), b.arlo.client.HttpClient)
+	b.eventStream = newEventStream(BaseUrl+fmt.Sprintf(NotifyResponsesPushServiceUri, b.arlo.Account.Token), &http.Client{Jar: b.arlo.client.HttpClient.Jar})
 
 forLoop:
 	for {
@@ -135,6 +138,11 @@ forLoop:
 	}()
 
 	return nil
+}
+
+func (b *Basestation) Unsubscribe() error {
+	resp, err := b.arlo.get(UnsubscribeUri, b.XCloudId, nil)
+	return checkRequest(resp, err, "failed to unsubscribe from event stream")
 }
 
 func (b *Basestation) Disconnect() error {

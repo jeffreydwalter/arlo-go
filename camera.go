@@ -19,6 +19,7 @@ package arlo
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/pkg/errors"
 )
@@ -225,7 +226,177 @@ func (c *Camera) DisableAudioAlerts(sensitivity int) (response *EventStreamRespo
 // FIXME: This feature requires more API calls to make it actually work, and I haven't figure out how to fully implement it.
 // It appears that the audio stream is Real-Time Transport Protocol (RTP), which requires a player (ffmpeg?) to consume the stream.
 func (c *Camera) PushToTalk() error {
-	resp, err := c.arlo.get(fmt.Sprintf(PushToTalkUri, c.UniqueId), c.XCloudId, nil)
+	/*
+		processResponse: function(e) {
+		            if (g.pc)
+		                if (e.properties && "answerSdp" == e.properties.type) {
+		                    var t = e.properties.data
+		                      , i = {
+		                        type: "answer",
+		                        sdp: t
+		                    };
+		                    r.debug(i),
+		                    g.pc.setRemoteDescription(new g.SessionDescription(i), u, d)
+		                } else if (e.properties && "answerCandidate" == e.properties.type)
+		                    if (g.candidateCache)
+		                        g.candidateCache.push(e.properties.data);
+		                    else {
+		                        var n = e.properties.data
+		                          , a = window.mozRTCIceCandidate || window.RTCIceCandidate
+		                          , o = new a({
+		                            candidate: n,
+		                            sdpMLineIndex: 0
+		                        });
+		                        r.debug(o),
+		                        g.pc.addIceCandidate(o)
+		                    }
+		        },
+		        startConnection: function(t) {
+		            g.loading = !0,
+		            g.error = !1,
+		            g.candidateCache = [];
+		            var i = t.deviceId
+		              , o = t.parentId
+		              , u = t.uniqueId;
+		            g.device = t;
+		            var p = {
+		                method: "GET",
+		                url: l.getPttUrl(u),
+		                data: "",
+		                headers: {
+		                    Authorization: s.ssoToken,
+		                    "Content-Type": "application/json; charset=utf-8",
+		                    "Data-Type": "json"
+		                }
+		            };
+		            r.debug("getting ptt data: " + JSON.stringify(p));
+		            n(p).then(function(u) {
+		                if (!u.data.success)
+		                    return e.$broadcast("show_error", u.data),
+		                    void (g.error = u.data.data.message || !0);
+		                var m = u.data.data.data;
+		                g.uSessionId = u.data.data.uSessionId,
+		                _.each(m, function(e) {
+		                    e.url && (e.urls = e.url,
+		                    delete e.url)
+		                });
+		                var f = new g.PeerConnection({
+		                    iceServers: m,
+		                    iceCandidatePoolSize: 0
+		                });
+		                f.onicecandidate = function(e) {
+		                    if (null != e.candidate) {
+		                        r.debug(e.candidate);
+		                        var a = {
+		                            action: "pushToTalk",
+		                            from: t.userId,
+		                            publishResponse: !1,
+		                            resource: "cameras/" + i,
+		                            responseUrl: "",
+		                            to: o,
+		                            transId: "web!98b0c88b!1429756137177",
+		                            properties: {
+		                                uSessionId: g.uSessionId,
+		                                type: "offerCandidate",
+		                                data: e.candidate.candidate
+		                            }
+		                        };
+		                        p = {
+		                            method: "POST",
+		                            url: l.getPttNotifyUrl(o),
+		                            data: a,
+		                            headers: {
+		                                xcloudId: t.xCloudId,
+		                                Authorization: s.ssoToken
+		                            }
+		                        },
+		                        n(p)
+		                    } else
+		                        r.debug("Failed to get any more candidate")
+		                }
+		                ,
+		                f.oniceconnectionstatechange = function(e) {
+		                    r.debug("ICE Connection State Change:" + f.iceConnectionState),
+		                    "connected" == f.iceConnectionState || "completed" == f.iceConnectionState ? g.loading = !1 : "disconnected" != f.iceConnectionState && "failed" != f.iceConnectionState || (g.stopConnection(),
+		                    g.error = a("i18n")("camera_label_ptt_failed_to_connect"))
+		                }
+		                ,
+		                g.pc = f,
+		                (navigator.getUserMedia || navigator.webkitGetUserMedia || navigator.mozGetUserMedia || navigator.msGetUserMedia).call(navigator, {
+		                    audio: !0,
+		                    video: !1
+		                }, function(e) {
+		                    g.stream = e,
+		                    g.stream.getAudioTracks()[0].enabled = !1,
+		                    f.addStream(e),
+		                    f.createOffer(function(e) {
+		                        f.setLocalDescription(e, c, d),
+		                        r.debug(e.sdp);
+		                        var a = {
+		                            action: "pushToTalk",
+		                            from: t.userId,
+		                            publishResponse: !0,
+		                            resource: "cameras/" + i,
+		                            responseUrl: "",
+		                            to: o,
+		                            transId: "web!98b0c88b!1429756137177",
+		                            properties: {
+		                                uSessionId: g.uSessionId,
+		                                type: "offerSdp",
+		                                data: e.sdp
+		                            }
+		                        };
+		                        p = {
+		                            method: "POST",
+		                            url: l.getPttNotifyUrl(o),
+		                            data: a,
+		                            headers: {
+		                                xcloudId: t.xCloudId,
+		                                Authorization: s.ssoToken
+		                            }
+		                        },
+		                        n(p)
+		                    }, d)
+		                }, d)
+		            })
+		        },
+		        stopConnection: function() {
+		            if (g.pc) {
+		                var e = {
+		                    action: "pushToTalk",
+		                    from: g.device.userId,
+		                    publishResponse: !1,
+		                    resource: "cameras/" + g.device.deviceId,
+		                    responseUrl: "",
+		                    to: g.device.deviceId,
+		                    transId: "web!98b0c88b!1429756137177",
+		                    properties: {
+		                        uSessionId: g.uSessionId,
+		                        type: "endSession"
+		                    }
+		                }
+		                  , t = {
+		                    method: "POST",
+		                    url: l.getPttNotifyUrl(g.device.deviceId),
+		                    data: e,
+		                    headers: {
+		                        xcloudId: g.device.xCloudId,
+		                        Authorization: s.ssoToken
+		                    }
+		                };
+		                n(t);
+		                try {
+		                    g.stream.getAudioTracks()[0].stop(),
+		                    g.stream = null
+		                } catch (e) {}
+		                g.pc.close(),
+		                g.pc = null,
+		                g.loading = !0
+		            }
+		        }
+		    };
+	*/
+	resp, err := c.arlo.get(fmt.Sprintf(PttUri, c.UniqueId), c.XCloudId, nil)
 	return checkRequest(resp, err, "failed to enable push to talk")
 }
 
@@ -262,10 +433,10 @@ func (c *Camera) SetAlertNotificationMethods(action string, email, push bool) (r
 }
 
 // StartStream returns a json object containing the rtmps url to the requested video stream.
-// You will need the to install a library to handle streaming of this protocol: https://pypi.python.org/pypi/python-librtmp
-//
-// The request to /users/devices/startStream returns:
-// NOTE: { "url":"rtsp://vzwow09-z2-prod.vz.netgear.com:80/vzmodulelive?egressToken=b1b4b675_ac03_4182_9844_043e02a44f71&userAgent=web&cameraId=48B4597VD8FF5_1473010750131" }
+// You will need something like ffmpeg to read the rtmps stream.
+
+// If you call StartStream(), you have to start reading data from the stream, or streaming will be cancelled
+// and taking a snapshot may fail (since it requires the stream to be active).
 func (c *Camera) StartStream() (url string, err error) {
 	payload := EventStreamPayload{
 		Action:          "set",
@@ -282,7 +453,7 @@ func (c *Camera) StartStream() (url string, err error) {
 
 	msg := "failed to start stream"
 
-	resp, err := c.arlo.post(DeviceStartStreamUri, c.XCloudId, payload, nil)
+	resp, err := c.arlo.post(StartStreamUri, c.XCloudId, payload, nil)
 	if err != nil {
 		return "", errors.WithMessage(err, msg)
 	}
@@ -297,27 +468,79 @@ func (c *Camera) StartStream() (url string, err error) {
 		return "", errors.WithMessage(errors.New("status was false"), msg)
 	}
 
-	response.URL = strings.Replace(response.URL, "rtsp://", "rtsps://", 1)
+	response.Data.URL = strings.Replace(response.Data.URL, "rtsp://", "rtsps://", 1)
 
-	return response.URL, nil
+	return response.Data.URL, nil
 }
 
-// TakeSnapshot causes the camera to record a snapshot.
-func (c *Camera) TakeSnapshot() (url string, err error) {
-	msg := "failed to take snapshot"
+// TakeSnapshot causes the camera to snapshot while recording.
+// NOTE: You MUST call StartStream() before calling this function.
+// If you call StartStream(), you have to start reading data from the stream, or streaming will be cancelled
+// and taking a snapshot may fail (since it requires the stream to be active).
 
-	url, err = c.StartStream()
-	if err != nil {
-		return "", errors.WithMessage(err, msg)
-	}
+// NOTE: You should not use this function is you just want a snapshot and aren't intending to stream.
+// Use TriggerFullFrameSnapshot() instead.
+//
+// NOTE: Use DownloadSnapshot() to download the actual image file.
+// TODO: Need to refactor the even stream code to allow handling of events whose transIds don't correlate. :/
+func (c *Camera) TakeSnapshot() (response *EventStreamResponse, err error) {
 
-	body := map[string]string{"deviceId": c.DeviceId, "parentId": c.ParentId, "xcloudId": c.XCloudId, "olsonTimeZone": c.Properties.OlsonTimeZone}
-	resp, err := c.arlo.post(DeviceTakeSnapshotUri, c.XCloudId, body, nil)
-	if err := checkRequest(resp, err, "failed to update device name"); err != nil {
-		return "", errors.WithMessage(err, msg)
-	}
+	return nil, errors.New("TakeSnapshot not implemented")
+	/*
+		msg := "failed to take snapshot"
 
-	return url, nil
+		body := map[string]string{"deviceId": c.DeviceId, "parentId": c.ParentId, "xcloudId": c.XCloudId, "olsonTimeZone": c.Properties.OlsonTimeZone}
+		resp, err := c.arlo.post(TakeSnapshotUri, c.XCloudId, body, nil)
+		if err := checkRequest(resp, err, msg); err != nil {
+			return nil, errors.WithMessage(err, msg)
+		}
+	*/
+
+	// TODO: Need to write the code to handle the event stream message.
+	/*
+			def callback(self, event):
+				if event.get("deviceId") == camera.get("deviceId") and event.get("resource") == "mediaUploadNotification":
+					presigned_content_url = event.get("presignedContentUrl")
+					if presigned_content_url is not None:
+		r				return presigned_content_url
+	*/
+}
+
+// TriggerFullFrameSnapshot causes the camera to record a full-frame snapshot.
+// The presignedFullFrameSnapshotUrl url is returned.
+// Use DownloadSnapshot() to download the actual image file.
+// TODO: Need to refactor the even stream code to allow handling of events whose transIds don't correlate. :/
+func (c *Camera) TriggerFullFrameSnapshot() (response *EventStreamResponse, err error) {
+
+	return nil, errors.New("TriggerFullFrameSnapshot not implemented")
+	/*
+		payload := EventStreamPayload{
+			Action:          "set",
+			Resource:        fmt.Sprintf("cameras/%s", c.DeviceId),
+			PublishResponse: true,
+			Properties: map[string]string{
+				"activityState": "fullFrameSnapshot",
+			},
+			TransId: genTransId(),
+			From:    fmt.Sprintf("%s_%s", c.UserId, TransIdPrefix),
+			To:      c.ParentId,
+		}
+
+		msg := "failed to trigger full-frame snapshot"
+
+		b := c.arlo.Basestations.Find(c.ParentId)
+		if b == nil {
+			err := fmt.Errorf("basestation (%s) not found for camera (%s)", c.ParentId, c.DeviceId)
+			return nil, errors.WithMessage(err, msg)
+		}
+		return b.makeEventStreamRequest(payload, msg)
+	*/
+	/*
+		def callback(self, event):
+			if event.get("from") == basestation.get("deviceId") and event.get("resource") == "cameras/"+camera.get("deviceId") and event.get("action") == "fullFrameSnapshotAvailable":
+				return event.get("properties", {}).get("presignedFullFrameSnapshotUrl")
+			return None
+	*/
 }
 
 // StartRecording causes the camera to start recording and returns a url that you must start reading from using ffmpeg
@@ -331,10 +554,46 @@ func (c *Camera) StartRecording() (url string, err error) {
 	}
 
 	body := map[string]string{"deviceId": c.DeviceId, "parentId": c.ParentId, "xcloudId": c.XCloudId, "olsonTimeZone": c.Properties.OlsonTimeZone}
-	resp, err := c.arlo.post(DeviceStartRecordUri, c.XCloudId, body, nil)
-	if err := checkRequest(resp, err, "failed to update device name"); err != nil {
+	resp, err := c.arlo.post(StartRecordUri, c.XCloudId, body, nil)
+	if err := checkRequest(resp, err, msg); err != nil {
 		return "", errors.WithMessage(err, msg)
 	}
 
 	return url, nil
+}
+
+// StopRecording causes the camera to stop recording.
+func (c *Camera) StopRecording() error {
+	msg := "failed to stop recording"
+
+	body := map[string]string{"deviceId": c.DeviceId, "parentId": c.ParentId, "xcloudId": c.XCloudId, "olsonTimeZone": c.Properties.OlsonTimeZone}
+	resp, err := c.arlo.post(StopRecordUri, c.XCloudId, body, nil)
+	if err := checkRequest(resp, err, msg); err != nil {
+		return errors.WithMessage(err, msg)
+	}
+
+	return nil
+}
+
+// This function downloads a Cvr Playlist file for the period fromDate to toDate.
+func (c *Camera) GetCvrPlaylist(fromDate, toDate time.Time) (playlist *CvrPlaylist, err error) {
+	msg := "failed to get cvr playlist"
+
+	resp, err := c.arlo.get(fmt.Sprintf(PlaylistUri, c.UniqueId, fromDate.Format("20060102"), toDate.Format("20060102")), c.XCloudId, nil)
+
+	if err != nil {
+		return nil, errors.WithMessage(err, msg)
+	}
+	defer resp.Body.Close()
+
+	response := new(CvrPlaylistResponse)
+	if err := resp.Decode(&response); err != nil {
+		return nil, err
+	}
+
+	if !response.Success {
+		return nil, errors.New(msg)
+	}
+
+	return &response.Data, nil
 }

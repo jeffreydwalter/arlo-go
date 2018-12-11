@@ -17,10 +17,12 @@
 package arlo
 
 import (
+	"fmt"
 	"net/http"
 	"sync"
+	"time"
 
-	"github.com/jeffreydwalter/arlo-golang/internal/request"
+	"github.com/jeffreydwalter/arlo-go/internal/request"
 
 	"github.com/pkg/errors"
 )
@@ -57,7 +59,7 @@ func Login(user string, pass string) (arlo *Arlo, err error) {
 	arlo = newArlo(user, pass)
 
 	body := map[string]string{"email": arlo.user, "password": arlo.pass}
-	resp, err := arlo.post(LoginUri, "", body, nil)
+	resp, err := arlo.post(LoginV2Uri, "", body, nil)
 	if err != nil {
 		return nil, errors.WithMessage(err, "failed to login")
 	}
@@ -91,31 +93,50 @@ func (a *Arlo) Logout() error {
 	return checkRequest(resp, err, "failed to logout")
 }
 
+func (a *Arlo) CheckSession() (session *Session, err error) {
+	msg := "failed to get session"
+	resp, err := a.get(SessionUri, "", nil)
+	if err != nil {
+		return nil, errors.WithMessage(err, msg)
+	}
+	defer resp.Body.Close()
+
+	var response SessionResponse
+	if err := resp.Decode(&response); err != nil {
+		return nil, err
+	}
+
+	if response.Success == false {
+		return nil, errors.WithMessage(errors.New(response.Reason), msg)
+	}
+	return &response.Data, nil
+}
+
 // GetDevices returns an array of all devices.
 // When you call Login, this method is called and all devices are cached in the arlo object.
 func (a *Arlo) GetDevices() (devices *Devices, err error) {
-	resp, err := a.get(DevicesUri, "", nil)
+	resp, err := a.get(fmt.Sprintf(DevicesUri, time.Now().Format("20060102")), "", nil)
 	if err != nil {
 		return nil, errors.WithMessage(err, "failed to get devices")
 	}
 	defer resp.Body.Close()
 
-	var deviceResponse DeviceResponse
-	if err := resp.Decode(&deviceResponse); err != nil {
+	var response DeviceResponse
+	if err := resp.Decode(&response); err != nil {
 		return nil, err
 	}
 
-	if !deviceResponse.Success {
+	if !response.Success {
 		return nil, errors.New("failed to get devices")
 	}
 
-	if len(deviceResponse.Data) == 0 {
+	if len(response.Data) == 0 {
 		return nil, errors.New("no devices found")
 	}
 
 	// Cache a pointer to the arlo object with each device.
-	for i := range deviceResponse.Data {
-		deviceResponse.Data[i].arlo = a
+	for i := range response.Data {
+		response.Data[i].arlo = a
 	}
 
 	// Disconnect all of the basestations from the EventStream.
@@ -127,8 +148,8 @@ func (a *Arlo) GetDevices() (devices *Devices, err error) {
 
 	a.rwmutex.Lock()
 	// Cache the devices as their respective types.
-	a.Cameras = *deviceResponse.Data.GetCameras()
-	a.Basestations = *deviceResponse.Data.GetBasestations()
+	a.Cameras = *response.Data.GetCameras()
+	a.Basestations = *response.Data.GetBasestations()
 	a.rwmutex.Unlock()
 
 	// subscribe each basestation to the EventStream.
@@ -138,25 +159,45 @@ func (a *Arlo) GetDevices() (devices *Devices, err error) {
 		}
 	}
 
-	return &deviceResponse.Data, nil
+	return &response.Data, nil
+}
+
+// GetProfile returns the user profile for the currently logged in user.
+func (a *Arlo) GetProfile() (profile *UserProfile, err error) {
+	resp, err := a.get(ProfileUri, "", nil)
+	if err != nil {
+		return nil, errors.WithMessage(err, "failed to get user profile")
+	}
+	defer resp.Body.Close()
+
+	var response UserProfileResponse
+	if err := resp.Decode(&response); err != nil {
+		return nil, err
+	}
+
+	if !response.Success {
+		return nil, errors.New("failed to get user profile")
+	}
+
+	return &response.Data, nil
 }
 
 // UpdateDisplayOrder sets the display order according to the order defined in the DeviceOrder given.
 func (a *Arlo) UpdateDisplayOrder(d DeviceOrder) error {
-	resp, err := a.post(DeviceDisplayOrderUri, "", d, nil)
+	resp, err := a.post(CameraOrderUri, "", d, nil)
 	return checkRequest(resp, err, "failed to display order")
 }
 
 // UpdateProfile takes a first and last name, and updates the user profile with that information.
 func (a *Arlo) UpdateProfile(firstName, lastName string) error {
 	body := map[string]string{"firstName": firstName, "lastName": lastName}
-	resp, err := a.put(UserProfileUri, "", body, nil)
+	resp, err := a.put(ProfileUri, "", body, nil)
 	return checkRequest(resp, err, "failed to update profile")
 }
 
 func (a *Arlo) UpdatePassword(pass string) error {
 	body := map[string]string{"currentPassword": a.pass, "newPassword": pass}
-	resp, err := a.post(UserChangePasswordUri, "", body, nil)
+	resp, err := a.post(UpdatePasswordUri, "", body, nil)
 	if err := checkRequest(resp, err, "failed to update password"); err != nil {
 		return err
 	}
@@ -167,6 +208,6 @@ func (a *Arlo) UpdatePassword(pass string) error {
 }
 
 func (a *Arlo) UpdateFriends(f Friend) error {
-	resp, err := a.put(UserFriendsUri, "", f, nil)
+	resp, err := a.put(FriendsUri, "", f, nil)
 	return checkRequest(resp, err, "failed to update friends")
 }
