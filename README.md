@@ -1,5 +1,5 @@
 # arlo-go
-![](gopher-arlo.png)	
+![](gopher-arlo.png)
 > Go package for interacting with Netgear's Arlo camera system.
 
 ---
@@ -92,14 +92,19 @@ func main() {
 		// The go func() here makes this script download the files concurrently.
 		// If you want to download them serially for some reason, just remove the go func() call.
 		go func() {
-			filename := fmt.Sprintf("%s %s.mp4", time.Unix(0, recording.UtcCreatedDate*int64(time.Millisecond)).Format(("2006-01-02 15:04:05")), recording.UniqueId)
+			fileToWrite, err := os.Create(fmt.Sprintf("downloads/%s_%s.mp4", time.Unix(0, recording.UtcCreatedDate*int64(time.Millisecond)).Format(("2006-01-02_15.04.05")), recording.UniqueId))
+            defer fileToWrite.Close()
+
+            if err != nil {
+                log.Fatal(err)
+            }
 
 			// The videos produced by Arlo are pretty small, even in their longest, best quality settings.
 			// DownloadFile() efficiently streams the file from the http.Response.Body directly to a file.
-			if err := arlo.DownloadFile(recording.PresignedContentUrl, fmt.Sprintf("videos/%s", filename)); err != nil {
+			if err := arlo.DownloadFile(recording.PresignedContentUrl, fileToWrite); err != nil {
 				log.Println(err)
 			} else {
-				log.Printf("Downloaded video %s from %s", recording.CreatedDate)
+				log.Printf("Downloaded video %s from %s", recording.CreatedDate, recording.PresignedContentUrl)
 			}
 
 			// Mark this go routine as done in the wait group.
