@@ -103,10 +103,12 @@ func (a *Arlo) DownloadFile(url, to string) error {
 
 func (a *Arlo) DownloadFile(url string, w io.Writer) error {
 	msg := fmt.Sprintf("failed to download file (%s)", url)
-	resp, err := a.get(url, "", nil)
+
+	resp, err := http.Get(url)
 	if err != nil {
 		return errors.WithMessage(err, msg)
 	}
+
 	defer resp.Body.Close()
 
 	_, err = io.Copy(w, resp.Body)
