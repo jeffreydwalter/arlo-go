@@ -115,15 +115,19 @@ func main() {
 	// Wait here until all of the go routines are done.
 	wg.Wait()
 
-	// Delete all of the videos you just downloaded from the Arlo library.
+
+    // The below example demonstrates how you could delete the cloud recordings after downloading them.
+    // Simply uncomment the below code to start using it.
+
+    // Delete all of the videos you just downloaded from the Arlo library.
 	// Notice that you can pass the "library" object we got back from the GetLibrary() call.
-	if err := arlo.BatchDeleteRecordings(library); err != nil {
+	/* if err := arlo.BatchDeleteRecordings(library); err != nil {
 		log.Println(err)
 		return
-	}
+	} */
 
 	// If we made it here without an exception, then the videos were successfully deleted.
-	log.Println("Batch deletion of videos completed successfully.")
+	/* log.Println("Batch deletion of videos completed successfully.") */
 }
 ```
 
