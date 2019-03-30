@@ -119,22 +119,6 @@ func (a *Arlo) DownloadFile(url string, w io.Writer) error {
 	return nil
 }
 
-func UnixMicro(t time.Time) int64 {
-	ns := t.UnixNano()
-	if ns < 0 {
-		return (ns - 999) / 1000
-	}
-	return ns / 1000
-}
-
-func UnixMilli(t time.Time) int64 {
-	ns := t.UnixNano()
-	if ns < 0 {
-		return (ns - 999999) / 1000000
-	}
-	return ns / 1000000
-}
-
 func FromUnixMicro(µs int64) time.Time { return time.Unix(0, 1000*µs) }
 
 func FromUnixMilli(ms int64) time.Time { return time.Unix(0, 1000000*ms) }
