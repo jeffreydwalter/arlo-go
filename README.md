@@ -1,4 +1,6 @@
 # arlo-go
+![](https://godoc.org/github.com/jeffreydwalter/arlo-go?status.svg)
+
 ![](gopher-arlo.png)
 > Go package for interacting with Netgear's Arlo camera system.
 
