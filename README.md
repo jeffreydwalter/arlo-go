@@ -38,9 +38,6 @@ $ go get github.com/jeffreydwalter/arlo-go
 # Note: This package uses the `go dep` package for dependency management. If you plan on contributing to this package, you will be required to use [dep](https://github.com/golang/dep). Setting it up is outside the scope of this README, but if you want to contribute and aren't familiar with `dep`, I'm happy to get you.
 ```
 
-**NOTE 1:** arlo.netgear.com requires TLS 1.2 for their API. So, if you're getting ssl errors, it's most likely related to your version of openssl. You may need to upgrade your openssl library.
-If you're running this library on OSX or macOS, they ship with `openssl v0.9.x` which does not support TLS 1.2. You should follow the instructions found [here](https://comeroutewithme.com/2016/03/13/python-osx-openssl-issue/) to upgrade your openssl library.
-
 After installing all of the required libraries, you can import and use this library like so:
 
 ```golang
