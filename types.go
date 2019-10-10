@@ -62,7 +62,7 @@ type Account struct {
 type AppStore struct {
 	Enforce       bool   `json:"enforce"`
 	LatestVersion string `json:"latestVersion"`
-	updateLink    string `json:"updateLink"`
+	UpdateLink    string `json:"updateLink"`
 }
 
 type Session struct {
@@ -235,7 +235,7 @@ type BaseNightLightProperties struct {
 	Brightness   int                     `json:"brightness,omitempty"`
 	Enabled      bool                    `json:"enabled"`
 	Mode         string                  `json:"mode,omitempty"`
-	RGB          NightLightRGBProperties `json:"mode,omitempty"`
+	RGB          NightLightRGBProperties `json:"rgb,omitempty"`
 	SleepTime    int64                   `json:"sleepTime,omitempty"`
 	SleepTimeRel int                     `json:"sleepTimeRel,omitempty"`
 }
