@@ -43,8 +43,8 @@ func newArlo(user string, pass string) (arlo *Arlo) {
 	baseHeaders := make(http.Header)
 	baseHeaders.Add("DNT", "1")
 	baseHeaders.Add("schemaVersion", "1")
-	baseHeaders.Add("Host", "arlo.netgear.com")
-	baseHeaders.Add("Referer", "https://arlo.netgear.com/")
+	baseHeaders.Add("Host", "my.arlo.com")
+	baseHeaders.Add("Referer", "https://my.arlo.com/")
 
 	c, _ := request.NewClient(BaseUrl, baseHeaders)
 
