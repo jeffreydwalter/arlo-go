@@ -1,5 +1,6 @@
 # arlo-go
 ![](https://godoc.org/github.com/jeffreydwalter/arlo-go?status.svg)
+[![Go Report Card](https://goreportcard.com/badge/github.com/jeffreydwalter/arlo-go)](https://goreportcard.com/report/github.com/jeffreydwalter/arlo-go)
 
 ![](gopher-arlo.png)
 > Go package for interacting with Netgear's Arlo camera system.
