@@ -37,11 +37,7 @@ Please read the [Issue Guidelines and Policies](https://github.com/jeffreydwalte
 ```bash
 # Install latest stable package
 $ go get github.com/jeffreydwalter/arlo-go
-
-# Note: This package uses the `go dep` package for dependency management. If you plan on contributing to this package, you will be required to use [dep](https://github.com/golang/dep). Setting it up is outside the scope of this README, but if you want to contribute and aren't familiar with `dep`, I'm happy to get you.
 ```
-
-After installing all of the required libraries, you can import and use this library like so:
 
 ```golang
 package main
