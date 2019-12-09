@@ -13,9 +13,9 @@ My goal is to bring parity to the Python version asap. If you know what you're d
 
 ---
 It is by no means complete, although it does expose quite a bit of the Arlo interface in an easy to use Go pacakge. As such, this package does not come with unit tests (feel free to add them, or I will eventually) or guarantees.
-**All [contributions](https://github.com/jeffreydwalter/arlo/issues?q=is%3Aissue+is%3Aopen+label%3A%22help+wanted%22) are welcome and appreciated!**
+**All [contributions](https://github.com/jeffreydwalter/arlo-go/issues?q=is%3Aissue+is%3Aopen+label%3A%22help+wanted%22) are welcome and appreciated!**
 
-**Please, feel free to [contribute](https://github.com/jeffreydwalter/arlo/issues?q=is%3Aissue+is%3Aopen+label%3A%22help+wanted%22) to this repo or buy Jeff a beer!** [![Donate](https://img.shields.io/badge/Donate-PayPal-green.svg)](https://www.paypal.com/cgi-bin/webscr?cmd=_donations&business=R77B7UXMLA6ML&lc=US&item_name=Jeff%20Needs%20Beer&item_number=buyjeffabeer&currency_code=USD&bn=PP%2dDonationsBF%3abtn_donateCC_LG%2egif%3aNonHosted)
+**Please, feel free to [contribute](https://github.com/jeffreydwalter/arlo-go/issues?q=is%3Aissue+is%3Aopen+label%3A%22help+wanted%22) to this repo or buy Jeff a beer!** [![Donate](https://img.shields.io/badge/Donate-PayPal-green.svg)](https://www.paypal.com/cgi-bin/webscr?cmd=_donations&business=R77B7UXMLA6ML&lc=US&item_name=Jeff%20Needs%20Beer&item_number=buyjeffabeer&currency_code=USD&bn=PP%2dDonationsBF%3abtn_donateCC_LG%2egif%3aNonHosted)
 
 ---
 ### Generous Benefactors (Thank you!)
@@ -23,13 +23,13 @@ No beers for Jeff yet! 🍺
 
 ---
 ### Awesomely Smart Contributors (Thank you!)
-Just me so far...
+* [bwagner5](https://github.com/bwagner5) - Dec 8, 2019 - Migrated package from dep to go modules.
 
-If You'd like to make a diffrence in the world and get your name on this most prestegious list, have a look at our [help wanted](https://github.com/jeffreydwalter/arlo/issues?q=is%3Aissue+is%3Aopen+label%3A%22help+wanted%22) section!
+If You'd like to make a diffrence in the world and get your name on this most prestegious list, have a look at our [help wanted](https://github.com/jeffreydwalter/arlo-go/issues?q=is%3Aissue+is%3Aopen+label%3A%22help+wanted%22) section!
 
 ---
 ### Filing an Issue
-Please read the [Issue Guidelines and Policies](https://github.com/jeffreydwalter/arlo/wiki/Issue-Guidelines-and-Policies) wiki page **BEFORE** you file an issue. Thanks.
+Please read the [Issue Guidelines and Policies](https://github.com/jeffreydwalter/arlo-go/wiki/Issue-Guidelines-and-Policies) wiki page **BEFORE** you file an issue. Thanks.
 
 ---
 
