@@ -103,10 +103,12 @@ func (a *Arlo) DownloadFile(url, to string) error {
 
 func (a *Arlo) DownloadFile(url string, w io.Writer) error {
 	msg := fmt.Sprintf("failed to download file (%s)", url)
-	resp, err := a.get(url, "", nil)
+
+	resp, err := http.Get(url)
 	if err != nil {
 		return errors.WithMessage(err, msg)
 	}
+
 	defer resp.Body.Close()
 
 	_, err = io.Copy(w, resp.Body)
@@ -115,22 +117,6 @@ func (a *Arlo) DownloadFile(url string, w io.Writer) error {
 	}
 
 	return nil
-}
-
-func UnixMicro(t time.Time) int64 {
-	ns := t.UnixNano()
-	if ns < 0 {
-		return (ns - 999) / 1000
-	}
-	return ns / 1000
-}
-
-func UnixMilli(t time.Time) int64 {
-	ns := t.UnixNano()
-	if ns < 0 {
-		return (ns - 999999) / 1000000
-	}
-	return ns / 1000000
 }
 
 func FromUnixMicro(µs int64) time.Time { return time.Unix(0, 1000*µs) }

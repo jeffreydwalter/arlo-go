@@ -25,7 +25,7 @@ const (
 	DeviceTypeSiren       = "siren"
 
 	TransIdPrefix = "web"
-	BaseUrl       = "https://arlo.netgear.com/hmsweb"
+	BaseUrl       = "https://my.arlo.com/hmsweb"
 
 	// TODO: Implement all of the following urls. There are many here I don't have devices for. :/
 	ActiveAutomationUri           = "/users/devices/automation/active"

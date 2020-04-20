@@ -1,5 +1,8 @@
 # arlo-go
-![](gopher-arlo.png)	
+![](https://godoc.org/github.com/jeffreydwalter/arlo-go?status.svg)
+[![Go Report Card](https://goreportcard.com/badge/github.com/jeffreydwalter/arlo-go)](https://goreportcard.com/report/github.com/jeffreydwalter/arlo-go)
+
+![](gopher-arlo.png)
 > Go package for interacting with Netgear's Arlo camera system.
 
 ---
@@ -10,9 +13,9 @@ My goal is to bring parity to the Python version asap. If you know what you're d
 
 ---
 It is by no means complete, although it does expose quite a bit of the Arlo interface in an easy to use Go pacakge. As such, this package does not come with unit tests (feel free to add them, or I will eventually) or guarantees.
-**All [contributions](https://github.com/jeffreydwalter/arlo/issues?q=is%3Aissue+is%3Aopen+label%3A%22help+wanted%22) are welcome and appreciated!**
+**All [contributions](https://github.com/jeffreydwalter/arlo-go/issues?q=is%3Aissue+is%3Aopen+label%3A%22help+wanted%22) are welcome and appreciated!**
 
-**Please, feel free to [contribute](https://github.com/jeffreydwalter/arlo/issues?q=is%3Aissue+is%3Aopen+label%3A%22help+wanted%22) to this repo or buy Jeff a beer!** [![Donate](https://img.shields.io/badge/Donate-PayPal-green.svg)](https://www.paypal.com/cgi-bin/webscr?cmd=_donations&business=R77B7UXMLA6ML&lc=US&item_name=Jeff%20Needs%20Beer&item_number=buyjeffabeer&currency_code=USD&bn=PP%2dDonationsBF%3abtn_donateCC_LG%2egif%3aNonHosted)
+**Please, feel free to [contribute](https://github.com/jeffreydwalter/arlo-go/issues?q=is%3Aissue+is%3Aopen+label%3A%22help+wanted%22) to this repo or buy Jeff a beer!** [![Donate](https://img.shields.io/badge/Donate-PayPal-green.svg)](https://www.paypal.com/cgi-bin/webscr?cmd=_donations&business=R77B7UXMLA6ML&lc=US&item_name=Jeff%20Needs%20Beer&item_number=buyjeffabeer&currency_code=USD&bn=PP%2dDonationsBF%3abtn_donateCC_LG%2egif%3aNonHosted)
 
 ---
 ### Generous Benefactors (Thank you!)
@@ -20,13 +23,13 @@ No beers for Jeff yet! 🍺
 
 ---
 ### Awesomely Smart Contributors (Thank you!)
-Just me so far...
+* [bwagner5](https://github.com/bwagner5) - Dec 8, 2019 - Migrated package from dep to go modules.
 
-If You'd like to make a diffrence in the world and get your name on this most prestegious list, have a look at our [help wanted](https://github.com/jeffreydwalter/arlo/issues?q=is%3Aissue+is%3Aopen+label%3A%22help+wanted%22) section!
+If You'd like to make a diffrence in the world and get your name on this most prestegious list, have a look at our [help wanted](https://github.com/jeffreydwalter/arlo-go/issues?q=is%3Aissue+is%3Aopen+label%3A%22help+wanted%22) section!
 
 ---
 ### Filing an Issue
-Please read the [Issue Guidelines and Policies](https://github.com/jeffreydwalter/arlo/wiki/Issue-Guidelines-and-Policies) wiki page **BEFORE** you file an issue. Thanks.
+Please read the [Issue Guidelines and Policies](https://github.com/jeffreydwalter/arlo-go/wiki/Issue-Guidelines-and-Policies) wiki page **BEFORE** you file an issue. Thanks.
 
 ---
 
@@ -34,14 +37,7 @@ Please read the [Issue Guidelines and Policies](https://github.com/jeffreydwalte
 ```bash
 # Install latest stable package
 $ go get github.com/jeffreydwalter/arlo-go
-
-# Note: This package uses the `go dep` package for dependency management. If you plan on contributing to this package, you will be required to use [dep](https://github.com/golang/dep). Setting it up is outside the scope of this README, but if you want to contribute and aren't familiar with `dep`, I'm happy to get you.
 ```
-
-**NOTE 1:** arlo.netgear.com requires TLS 1.2 for their API. So, if you're getting ssl errors, it's most likely related to your version of openssl. You may need to upgrade your openssl library.
-If you're running this library on OSX or macOS, they ship with `openssl v0.9.x` which does not support TLS 1.2. You should follow the instructions found [here](https://comeroutewithme.com/2016/03/13/python-osx-openssl-issue/) to upgrade your openssl library.
-
-After installing all of the required libraries, you can import and use this library like so:
 
 ```golang
 package main
@@ -92,14 +88,19 @@ func main() {
 		// The go func() here makes this script download the files concurrently.
 		// If you want to download them serially for some reason, just remove the go func() call.
 		go func() {
-			filename := fmt.Sprintf("%s %s.mp4", time.Unix(0, recording.UtcCreatedDate*int64(time.Millisecond)).Format(("2006-01-02 15:04:05")), recording.UniqueId)
+			fileToWrite, err := os.Create(fmt.Sprintf("downloads/%s_%s.mp4", time.Unix(0, recording.UtcCreatedDate*int64(time.Millisecond)).Format(("2006-01-02_15.04.05")), recording.UniqueId))
+            defer fileToWrite.Close()
+
+            if err != nil {
+                log.Fatal(err)
+            }
 
 			// The videos produced by Arlo are pretty small, even in their longest, best quality settings.
 			// DownloadFile() efficiently streams the file from the http.Response.Body directly to a file.
-			if err := arlo.DownloadFile(recording.PresignedContentUrl, fmt.Sprintf("videos/%s", filename)); err != nil {
+			if err := arlo.DownloadFile(recording.PresignedContentUrl, fileToWrite); err != nil {
 				log.Println(err)
 			} else {
-				log.Printf("Downloaded video %s from %s", recording.CreatedDate)
+				log.Printf("Downloaded video %s from %s", recording.CreatedDate, recording.PresignedContentUrl)
 			}
 
 			// Mark this go routine as done in the wait group.
@@ -110,15 +111,19 @@ func main() {
 	// Wait here until all of the go routines are done.
 	wg.Wait()
 
-	// Delete all of the videos you just downloaded from the Arlo library.
+
+    // The below example demonstrates how you could delete the cloud recordings after downloading them.
+    // Simply uncomment the below code to start using it.
+
+    // Delete all of the videos you just downloaded from the Arlo library.
 	// Notice that you can pass the "library" object we got back from the GetLibrary() call.
-	if err := arlo.BatchDeleteRecordings(library); err != nil {
+	/* if err := arlo.BatchDeleteRecordings(library); err != nil {
 		log.Println(err)
 		return
-	}
+	} */
 
 	// If we made it here without an exception, then the videos were successfully deleted.
-	log.Println("Batch deletion of videos completed successfully.")
+	/* log.Println("Batch deletion of videos completed successfully.") */
 }
 ```
 
