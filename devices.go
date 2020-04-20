@@ -102,7 +102,25 @@ func (d Device) IsBasestation() bool {
 }
 
 func (d Device) IsCamera() bool {
-	return d.DeviceType == DeviceTypeCamera
+	switch(d.DeviceType) {
+        case
+            DeviceTypeCamera,
+            DeviceTypeArloQ,
+        return true
+    }
+    return false
+}
+
+func (d Device) IsArloQ() bool {
+	return d.DeviceType == DeviceTypeArloBridge
+}
+
+func (d Device) IsLight() bool {
+	return d.DeviceType == DeviceTypeLights
+}
+
+func (d Device) IsSiren() bool {
+	return d.DeviceType == DeviceTypeSiren
 }
 
 // GetBasestations returns a Basestations object containing all devices that are NOT type "camera".
