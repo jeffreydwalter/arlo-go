@@ -105,7 +105,7 @@ func (d Device) IsCamera() bool {
 	switch(d.DeviceType) {
         case
             DeviceTypeCamera,
-            DeviceTypeArloQ,
+            DeviceTypeArloQ:
         return true
     }
     return false
